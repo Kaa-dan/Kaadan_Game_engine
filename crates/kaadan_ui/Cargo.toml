@@ -10,6 +10,7 @@ description = "Immediate and retained UI framework for KaadanEngine"
 workspace = true
 
 [dependencies]
-fontdue.workspace = true
 kaadan_math.workspace = true
 kaadan_core.workspace = true
+fontdue.workspace = true
+tracing.workspace = true

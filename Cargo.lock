@@ -825,6 +825,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8babf46d4c1c9d92deac9f7be466f76dfc4482b6452fc5024b5e8daf6ffeb3ee"
 dependencies = [
  "bytemuck",
+ "serde",
 ]
 
 [[package]]
@@ -1155,16 +1156,17 @@ dependencies = [
  "kaadan_renderer",
  "kaadan_scene",
  "kaadan_ui",
+ "tracing",
 ]
 
 [[package]]
 name = "kaadan_assets"
 version = "0.1.0"
 dependencies = [
- "image",
  "kaadan_core",
+ "kaadan_math",
  "notify",
- "tokio",
+ "tracing",
 ]
 
 [[package]]
@@ -1172,13 +1174,16 @@ name = "kaadan_audio"
 version = "0.1.0"
 dependencies = [
  "kaadan_core",
+ "kaadan_math",
  "rodio",
+ "tracing",
 ]
 
 [[package]]
 name = "kaadan_core"
 version = "0.1.0"
 dependencies = [
+ "kaadan_math",
  "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber",
@@ -1190,7 +1195,9 @@ version = "0.1.0"
 dependencies = [
  "hecs",
  "kaadan_core",
+ "kaadan_math",
  "rayon",
+ "tracing",
 ]
 
 [[package]]
@@ -1199,6 +1206,9 @@ version = "0.1.0"
 dependencies = [
  "gilrs",
  "kaadan_core",
+ "kaadan_math",
+ "kaadan_platform",
+ "tracing",
 ]
 
 [[package]]
@@ -1207,6 +1217,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "glam",
+ "serde",
 ]
 
 [[package]]
@@ -1214,9 +1225,11 @@ name = "kaadan_physics"
 version = "0.1.0"
 dependencies = [
  "kaadan_core",
+ "kaadan_ecs",
  "kaadan_math",
  "parry2d",
  "rapier2d",
+ "tracing",
 ]
 
 [[package]]
@@ -1224,7 +1237,9 @@ name = "kaadan_platform"
 version = "0.1.0"
 dependencies = [
  "kaadan_core",
+ "kaadan_math",
  "raw-window-handle",
+ "tracing",
  "winit",
 ]
 
@@ -1233,9 +1248,12 @@ name = "kaadan_renderer"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "image",
  "kaadan_core",
  "kaadan_math",
  "pollster",
+ "raw-window-handle",
+ "tracing",
  "wgpu",
 ]
 
@@ -1245,8 +1263,10 @@ version = "0.1.0"
 dependencies = [
  "kaadan_core",
  "kaadan_ecs",
+ "kaadan_math",
  "ron",
  "serde",
+ "tracing",
 ]
 
 [[package]]
@@ -1256,6 +1276,7 @@ dependencies = [
  "fontdue",
  "kaadan_core",
  "kaadan_math",
+ "tracing",
 ]
 
 [[package]]
@@ -2813,15 +2834,6 @@ name = "tinyvec_macros"
 version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1f3ccbac311fea05f86f61904b462b55fb3df8837a366dfc601a0161d0532f20"
-
-[[package]]
-name = "tokio"
-version = "1.52.3"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "8fc7f01b389ac15039e4dc9531aa973a135d7a4135281b12d7c1bc79fd57fffe"
-dependencies = [
- "pin-project-lite",
-]
 
 [[package]]
 name = "toml_datetime"

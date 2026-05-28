@@ -10,7 +10,9 @@ description = "Scene graph and serialization for KaadanEngine"
 workspace = true
 
 [dependencies]
+kaadan_math.workspace = true
+kaadan_core.workspace = true
+kaadan_ecs.workspace = true
 serde.workspace = true
 ron.workspace = true
-kaadan_ecs.workspace = true
-kaadan_core.workspace = true
+tracing.workspace = true

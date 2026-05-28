@@ -10,6 +10,10 @@ description = "Entity-Component-System world for KaadanEngine"
 workspace = true
 
 [dependencies]
-hecs.workspace = true
-rayon.workspace = true
+kaadan_math.workspace = true
 kaadan_core.workspace = true
+hecs.workspace = true
+tracing.workspace = true
+
+[dev-dependencies]
+rayon.workspace = true
