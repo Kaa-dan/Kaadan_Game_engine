@@ -1,0 +1,23 @@
+[package]
+name = "kaadan_app"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Application entry point and engine orchestration for KaadanEngine"
+
+[lints]
+workspace = true
+
+[dependencies]
+kaadan_math.workspace = true
+kaadan_core.workspace = true
+kaadan_platform.workspace = true
+kaadan_renderer.workspace = true
+kaadan_ecs.workspace = true
+kaadan_input.workspace = true
+kaadan_audio.workspace = true
+kaadan_assets.workspace = true
+kaadan_scene.workspace = true
+kaadan_ui.workspace = true
+kaadan_physics.workspace = true

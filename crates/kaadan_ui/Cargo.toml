@@ -1,0 +1,15 @@
+[package]
+name = "kaadan_ui"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Immediate and retained UI framework for KaadanEngine"
+
+[lints]
+workspace = true
+
+[dependencies]
+fontdue.workspace = true
+kaadan_math.workspace = true
+kaadan_core.workspace = true

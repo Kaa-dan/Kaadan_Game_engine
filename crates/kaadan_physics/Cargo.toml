@@ -1,0 +1,16 @@
+[package]
+name = "kaadan_physics"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "2D physics integration for KaadanEngine (Rapier)"
+
+[lints]
+workspace = true
+
+[dependencies]
+rapier2d.workspace = true
+parry2d.workspace = true
+kaadan_math.workspace = true
+kaadan_core.workspace = true
