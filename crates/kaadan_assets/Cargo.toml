@@ -1,0 +1,16 @@
+[package]
+name = "kaadan_assets"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Asset loading and hot-reload pipeline for KaadanEngine"
+
+[lints]
+workspace = true
+
+[dependencies]
+tokio.workspace = true
+image.workspace = true
+notify.workspace = true
+kaadan_core.workspace = true

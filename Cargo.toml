@@ -1,0 +1,97 @@
+[workspace]
+resolver = "2"
+members = [
+    "crates/kaadan_math",
+    "crates/kaadan_core",
+    "crates/kaadan_platform",
+    "crates/kaadan_renderer",
+    "crates/kaadan_ecs",
+    "crates/kaadan_input",
+    "crates/kaadan_audio",
+    "crates/kaadan_assets",
+    "crates/kaadan_scene",
+    "crates/kaadan_ui",
+    "crates/kaadan_physics",
+    "crates/kaadan_app",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/kaadan/KaadanEngine"
+rust-version = "1.80"
+
+[workspace.dependencies]
+# Math & data
+glam = { version = "0.29", features = ["bytemuck"] }
+bytemuck = { version = "1", features = ["derive"] }
+
+# Logging & errors
+tracing = "0.1"
+tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+thiserror = "2"
+
+# Windowing & input
+winit = "0.30"
+raw-window-handle = "0.6"
+gilrs = "0.11"
+
+# Rendering
+wgpu = "23"
+pollster = "0.4"
+
+# ECS
+hecs = "0.10"
+rayon = "1"
+
+# Audio
+rodio = "0.20"
+
+# Assets
+tokio = { version = "1", features = ["rt-multi-thread", "fs", "sync"] }
+image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
+notify = "7"
+
+# Serialization
+serde = { version = "1", features = ["derive"] }
+ron = "0.8"
+
+# UI
+fontdue = "0.9"
+
+# Physics
+rapier2d = { version = "0.22", features = ["simd-stable"] }
+parry2d = "0.17"
+
+# Internal crates
+kaadan_math = { path = "crates/kaadan_math" }
+kaadan_core = { path = "crates/kaadan_core" }
+kaadan_platform = { path = "crates/kaadan_platform" }
+kaadan_renderer = { path = "crates/kaadan_renderer" }
+kaadan_ecs = { path = "crates/kaadan_ecs" }
+kaadan_input = { path = "crates/kaadan_input" }
+kaadan_audio = { path = "crates/kaadan_audio" }
+kaadan_assets = { path = "crates/kaadan_assets" }
+kaadan_scene = { path = "crates/kaadan_scene" }
+kaadan_ui = { path = "crates/kaadan_ui" }
+kaadan_physics = { path = "crates/kaadan_physics" }
+kaadan_app = { path = "crates/kaadan_app" }
+
+[workspace.lints.clippy]
+# Correctness
+all = { level = "deny", priority = -1 }
+correctness = { level = "deny", priority = -1 }
+
+# Game-engine-friendly: allow casts between numeric types
+cast_possible_truncation = { level = "allow" }
+cast_precision_loss = { level = "allow" }
+cast_sign_loss = { level = "allow" }
+
+# Performance
+needless_pass_by_value = { level = "warn" }
+redundant_clone = { level = "warn" }
+
+# Style
+module_name_repetitions = { level = "allow" }
+too_many_arguments = { level = "allow" }
