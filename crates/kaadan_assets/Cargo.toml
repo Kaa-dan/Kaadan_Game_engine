@@ -10,7 +10,7 @@ description = "Asset loading and hot-reload pipeline for KaadanEngine"
 workspace = true
 
 [dependencies]
-tokio.workspace = true
-image.workspace = true
-notify.workspace = true
+kaadan_math.workspace = true
 kaadan_core.workspace = true
+tracing.workspace = true
+notify.workspace = true

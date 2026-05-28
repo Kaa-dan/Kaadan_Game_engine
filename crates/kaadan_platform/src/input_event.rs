@@ -90,3 +90,13 @@ pub enum KeyCode {
     ControlRight,
     Unknown,
 }
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum LifecycleEvent {
+    /// App moved to foreground (resume)
+    Resumed,
+    /// App moved to background (pause) — save state, release GPU resources
+    Suspended,
+    /// Low memory warning — free caches
+    LowMemory,
+}

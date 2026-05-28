@@ -10,5 +10,10 @@ description = "Input handling for KaadanEngine (keyboard, touch, gamepad)"
 workspace = true
 
 [dependencies]
-gilrs.workspace = true
+kaadan_math.workspace = true
 kaadan_core.workspace = true
+kaadan_platform.workspace = true
+tracing.workspace = true
+
+[target.'cfg(not(any(target_os = "android", target_os = "ios")))'.dependencies]
+gilrs.workspace = true

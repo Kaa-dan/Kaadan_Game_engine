@@ -21,3 +21,4 @@ kaadan_assets.workspace = true
 kaadan_scene.workspace = true
 kaadan_ui.workspace = true
 kaadan_physics.workspace = true
+tracing.workspace = true
