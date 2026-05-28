@@ -825,6 +825,7 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "8babf46d4c1c9d92deac9f7be466f76dfc4482b6452fc5024b5e8daf6ffeb3ee"
 dependencies = [
  "bytemuck",
+ "serde",
 ]
 
 [[package]]
@@ -1179,6 +1180,7 @@ dependencies = [
 name = "kaadan_core"
 version = "0.1.0"
 dependencies = [
+ "kaadan_math",
  "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber",
@@ -1207,6 +1209,7 @@ version = "0.1.0"
 dependencies = [
  "bytemuck",
  "glam",
+ "serde",
 ]
 
 [[package]]
@@ -1224,7 +1227,9 @@ name = "kaadan_platform"
 version = "0.1.0"
 dependencies = [
  "kaadan_core",
+ "kaadan_math",
  "raw-window-handle",
+ "tracing",
  "winit",
 ]
 

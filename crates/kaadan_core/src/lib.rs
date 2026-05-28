@@ -1,3 +1,8 @@
-//! Core engine types, structured logging, and error definitions.
-//!
-//! Provides the foundational utilities shared across all KaadanEngine crates.
+//! KaadanEngine core utilities — logging, error types, engine-wide traits.
+
+mod error;
+mod logging;
+
+pub use error::{KaadanError, KaadanResult};
+pub use logging::init_logging;
+pub use tracing;
