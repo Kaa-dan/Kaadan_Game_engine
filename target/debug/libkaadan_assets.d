@@ -1,1 +1,0 @@
-/Users/kaadan/Projects/KaadanEngine/target/debug/libkaadan_assets.rlib: /Users/kaadan/Projects/KaadanEngine/crates/kaadan_assets/src/lib.rs /Users/kaadan/Projects/KaadanEngine/crates/kaadan_core/src/lib.rs
