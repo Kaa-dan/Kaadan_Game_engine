@@ -16,13 +16,14 @@ mod sprite;
 mod sprite_batch;
 mod sprite_renderer;
 mod texture;
+mod ui_renderer;
 mod vertex;
 mod vertex3d;
 
 #[cfg(feature = "gltf")]
 mod gltf_loader;
 
-pub use atlas::{AtlasRegion, TextureAtlas};
+pub use atlas::{AtlasPacker, AtlasRegion, TextureAtlas};
 pub use camera2d::Camera2D;
 pub use camera3d::Camera3D;
 pub use material::{DirectionalLight, PbrMaterial, PointLight};
@@ -38,7 +39,8 @@ pub use renderer::{FrameContext, Renderer};
 pub use sprite::Sprite;
 pub use sprite_batch::{DrawCall, SpriteBatch, SpriteVertex};
 pub use sprite_renderer::SpriteRenderer;
-pub use texture::Texture;
+pub use texture::{mip_level_count, Texture};
+pub use ui_renderer::{UiQuad, UiRenderer};
 pub use vertex::Vertex;
 pub use vertex3d::Vertex3D;
 
@@ -53,3 +55,6 @@ pub const SPRITE_SHADER: &str = include_str!("../../../assets/shaders/sprite.wgs
 
 /// PBR WGSL shader source for lit 3D meshes.
 pub const PBR_SHADER: &str = include_str!("../../../assets/shaders/pbr.wgsl");
+
+/// UI WGSL shader source for screen-space quads.
+pub const UI_SHADER: &str = include_str!("../../../assets/shaders/ui.wgsl");

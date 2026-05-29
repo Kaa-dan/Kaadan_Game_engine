@@ -214,7 +214,7 @@ Standalone Unity-style editor: **raw winit + manual egui-wgpu** (not eframe). La
 **Highest-impact gaps (block the stated MVP goals):**
 1. **No scripting layer / integrated code editor** — the defining feature of a "Unity-like editor with Rust scripting" is entirely unstarted.
 2. **Mobile targets non-functional** — wrong crate-type, no entry points, desktop-only `platform::run`; HarmonyOS untouched.
-3. **In-game UI renders nothing** — `kaadan_ui` is logic-only and unregistered.
+3. ~~**In-game UI renders nothing** — `kaadan_ui` is logic-only and unregistered.~~ **Mostly fixed in Phase 3**: a `UiRenderer` draws node backgrounds + progress bars as screen-space quads, and layout/interaction systems are registered in the engine. **Remaining:** text glyph rendering (blocked on a bundled font asset).
 4. **Editor ↔ engine divergence** — editor owns a parallel scene format and its own loop; risk of two engines drifting.
 
 **Correctness risks:**
@@ -225,8 +225,8 @@ Standalone Unity-style editor: **raw winit + manual egui-wgpu** (not eframe). La
 - glTF import drops textures; "PBR" is Blinn-Phong. *(Slated for Phase 4.)*
 
 **Performance risks (matter for the mobile/perf goal):**
-- PBR allocates per-entity uniform buffers + bind groups **every frame**.
-- No mipmaps + Nearest/Linear sampler mismatch → texture aliasing.
+- PBR allocates per-entity uniform buffers + bind groups **every frame**. *(Slated for Phase 4.)*
+- ~~No mipmaps + Nearest/Linear sampler mismatch → texture aliasing.~~ **Fixed in Phase 3** (full mip chain generated on upload; trilinear sampler).
 - Frame pacer computes a budget but never enforces it.
 - Asset loading is fully synchronous (no async/streaming).
 
@@ -297,3 +297,4 @@ Run during this audit (toolchain: `cargo 1.93.1`):
 
 - **✅ Phase 1 — Foundation Hardening & CI** (2026-05-30): GitHub Actions CI added (`.github/workflows/ci.yml`: fmt/clippy/test on Linux/macOS/Windows + `cargo deny`); `init_logging()` made idempotent (`try_init`); removed unused deps (`kaadan_math` from core & audio, `tracing` from audio/ui/physics, `parry2d`+`kaadan_core` from physics); wired `kaadan_math` `serde` feature with cfg-gated derives + roundtrip test; added `docs/conventions.md`. Workspace clippy/fmt/test all green (45 tests).
 - **✅ Phase 2 — Core Runtime** (2026-05-30): `kaadan_ecs` scheduler now has ordered **stages** (`First/PreUpdate/FixedUpdate/Update/PostUpdate/Render`); `Time` gained a **fixed-timestep accumulator** (clamped, with spiral-of-death guard) and `App::tick` runs a capped fixed-update loop; added a double-buffered **`Events<T>`**; `App::add_system` stays backward-compatible (defaults to `Update`) with a new `add_system_to_stage`. `kaadan_scene` transform propagation is now **recursive (any depth)** and auto-inserts `GlobalTransform`. `kaadan_physics` systems moved to **`FixedUpdate`**. `kaadan_app::Engine` registers transform propagation in `PostUpdate` and gained `add_plugin`/`add_system_to_stage`. Corrected the false "parallel execution" doc on `kaadan_ecs` (it is deterministic single-threaded). All green (52 tests).
+- **✅ Phase 3 — 2D Hardening + In-Game UI** (2026-05-30): `kaadan_renderer` now generates a full **mipmap chain** on texture upload with a trilinear sampler (was single-level + Nearest/Linear mismatch); added a runtime **`AtlasPacker`** (shelf packer); added a **`UiRenderer`** (screen-space ortho, alpha-blended colored/textured quads, built-in white texture) + `UiQuad` + `assets/shaders/ui.wgsl` / `UI_SHADER`. `kaadan_app::Engine` registers `ui_layout_system` + `ui_interaction_system` (PreUpdate) and draws UI node backgrounds + progress bars in the 2D pass; added `examples/ui_demo.rs`. **Text glyph rendering is deferred** (needs a bundled font); UI verification was compile/clippy/test only — not visually confirmed (headless). All green (57 tests).

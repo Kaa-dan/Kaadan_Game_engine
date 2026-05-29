@@ -2,11 +2,13 @@ use std::collections::HashMap;
 
 use kaadan_ecs::{App, Plugin, Resources, Stage, World};
 use kaadan_input::InputState;
-use kaadan_math::{Color, Handle, HandleAllocator, Mat4};
+use kaadan_math::{Color, Handle, HandleAllocator, Mat4, Rect, Vec2};
 use kaadan_platform::{AppHandler, InputEvent, LifecycleEvent, PlatformWindow};
 use kaadan_renderer::{
     Camera2D, Camera3D, Mesh3DGpu, PbrRenderer, Renderer, SpriteBatch, SpriteRenderer, Texture,
+    UiQuad, UiRenderer,
 };
+use kaadan_ui::{UiNode, UiProgressBar};
 
 use crate::frame_pacer::{FramePacer, FrameStats};
 
@@ -18,6 +20,7 @@ struct RenderCtx {
     sprite: SpriteRenderer,
     sprite_batch: SpriteBatch,
     pbr: PbrRenderer,
+    ui: UiRenderer,
     textures: HashMap<Handle<Texture>, Texture>,
     texture_alloc: HandleAllocator<Texture>,
     meshes: HashMap<Handle<Mesh3DGpu>, Mesh3DGpu>,
@@ -141,6 +144,13 @@ impl Engine {
     pub fn new(target_fps: u32) -> Self {
         let mut app = App::new();
         app.insert_resource(InputState::new());
+        // UI layout then interaction, before gameplay systems read the results.
+        app.add_system_to_stage(Stage::PreUpdate, "ui_layout", kaadan_ui::ui_layout_system);
+        app.add_system_to_stage(
+            Stage::PreUpdate,
+            "ui_interaction",
+            kaadan_ui::ui_interaction_system,
+        );
         // Keep GlobalTransform up to date for the whole hierarchy each frame,
         // after gameplay systems have run.
         app.add_system_to_stage(
@@ -237,6 +247,11 @@ impl AppHandler for Engine {
             renderer.surface_format(),
             kaadan_renderer::PBR_SHADER,
         );
+        let ui = UiRenderer::new(
+            &renderer.device,
+            renderer.surface_format(),
+            kaadan_renderer::UI_SHADER,
+        );
 
         self.app
             .resources
@@ -253,6 +268,7 @@ impl AppHandler for Engine {
             sprite,
             sprite_batch: SpriteBatch::new(),
             pbr,
+            ui,
             textures: HashMap::new(),
             texture_alloc: HandleAllocator::new(),
             meshes: HashMap::new(),
@@ -338,6 +354,63 @@ impl AppHandler for Engine {
     }
 }
 
+/// Build screen-space UI quads from the world: node backgrounds (with a small
+/// hover/press tint for interactive nodes) and progress-bar track + fill.
+/// Text glyphs are not drawn yet (pending a bundled font). All quads sample the
+/// `UiRenderer`'s built-in white texture, so `uv` is the full 0..1 range.
+fn collect_ui_quads(world: &World) -> Vec<UiQuad> {
+    use kaadan_ui::InteractionState;
+    let full_uv = Rect::new(Vec2::ZERO, Vec2::ONE);
+    let mut quads = Vec::new();
+
+    // Node backgrounds (skip nodes that draw their own progress-bar visuals).
+    for (_e, node) in world.query::<&UiNode>().without::<&UiProgressBar>().iter() {
+        if !node.visible || node.background.a <= 0.0 {
+            continue;
+        }
+        let mut color = node.background;
+        if node.interactive {
+            let d = match node.state {
+                InteractionState::Hovered => 0.08,
+                InteractionState::Pressed => -0.08,
+                InteractionState::None => 0.0,
+            };
+            color = Color::new(
+                (color.r + d).clamp(0.0, 1.0),
+                (color.g + d).clamp(0.0, 1.0),
+                (color.b + d).clamp(0.0, 1.0),
+                color.a,
+            );
+        }
+        quads.push(UiQuad {
+            rect: node.computed_rect,
+            uv: full_uv,
+            color,
+        });
+    }
+
+    // Progress bars: background track then a left-anchored fill.
+    for (_e, (node, bar)) in world.query::<(&UiNode, &UiProgressBar)>().iter() {
+        if !node.visible {
+            continue;
+        }
+        let r = node.computed_rect;
+        quads.push(UiQuad {
+            rect: r,
+            uv: full_uv,
+            color: bar.background_color,
+        });
+        let fill_w = (r.max.x - r.min.x) * bar.progress.clamp(0.0, 1.0);
+        quads.push(UiQuad {
+            rect: Rect::new(r.min, Vec2::new(r.min.x + fill_w, r.max.y)),
+            uv: full_uv,
+            color: bar.fill_color,
+        });
+    }
+
+    quads
+}
+
 fn render_frame(
     ctx: &mut RenderCtx,
     world: &World,
@@ -414,6 +487,21 @@ fn render_frame(
                     &ctx.renderer.queue,
                     &ctx.sprite_batch,
                     view_proj_2d,
+                    &mut pass,
+                );
+
+                // UI overlay on top of sprites (screen-space, solid quads).
+                let ui_quads = collect_ui_quads(world);
+                let screen = Vec2::new(
+                    ctx.renderer.surface_config.width as f32,
+                    ctx.renderer.surface_config.height as f32,
+                );
+                ctx.ui.render(
+                    &ctx.renderer.device,
+                    &ctx.renderer.queue,
+                    screen,
+                    &ui_quads,
+                    None,
                     &mut pass,
                 );
             }

@@ -389,7 +389,7 @@ graph LR
 
 - [x] P1 Foundation & CI ✅ (2026-05-30)
 - [x] P2 Core Runtime ✅ (2026-05-30)
-- [ ] P3 2D + In-Game UI
+- [x] P3 2D + In-Game UI ✅ (2026-05-30) — *quad rendering; text glyphs deferred (needs bundled font)*
 - [ ] P4 3D PBR + glTF
 - [ ] P5 Asset Pipeline
 - [ ] P6 Scripting
