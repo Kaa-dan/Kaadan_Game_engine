@@ -218,11 +218,11 @@ Standalone Unity-style editor: **raw winit + manual egui-wgpu** (not eframe). La
 4. **Editor ↔ engine divergence** — editor owns a parallel scene format and its own loop; risk of two engines drifting.
 
 **Correctness risks:**
-- Transform propagation is single-level (grandchildren break).
+- ~~Transform propagation is single-level (grandchildren break).~~ **Fixed in Phase 2** (recursive, any depth).
 - Physics leaks bodies on entity despawn; sync is one-way (no kinematic control from ECS).
-- `init_logging()` panics if called twice (editor + app in one process).
-- `MouseInput` reports (0,0) position on desktop.
-- glTF import drops textures; "PBR" is Blinn-Phong.
+- ~~`init_logging()` panics if called twice~~ **Fixed in Phase 1** (`try_init`).
+- `MouseInput` reports (0,0) position on desktop. *(Slated for Phase 9.)*
+- glTF import drops textures; "PBR" is Blinn-Phong. *(Slated for Phase 4.)*
 
 **Performance risks (matter for the mobile/perf goal):**
 - PBR allocates per-entity uniform buffers + bind groups **every frame**.
@@ -296,3 +296,4 @@ Run during this audit (toolchain: `cargo 1.93.1`):
 ## 10. Roadmap Progress
 
 - **✅ Phase 1 — Foundation Hardening & CI** (2026-05-30): GitHub Actions CI added (`.github/workflows/ci.yml`: fmt/clippy/test on Linux/macOS/Windows + `cargo deny`); `init_logging()` made idempotent (`try_init`); removed unused deps (`kaadan_math` from core & audio, `tracing` from audio/ui/physics, `parry2d`+`kaadan_core` from physics); wired `kaadan_math` `serde` feature with cfg-gated derives + roundtrip test; added `docs/conventions.md`. Workspace clippy/fmt/test all green (45 tests).
+- **✅ Phase 2 — Core Runtime** (2026-05-30): `kaadan_ecs` scheduler now has ordered **stages** (`First/PreUpdate/FixedUpdate/Update/PostUpdate/Render`); `Time` gained a **fixed-timestep accumulator** (clamped, with spiral-of-death guard) and `App::tick` runs a capped fixed-update loop; added a double-buffered **`Events<T>`**; `App::add_system` stays backward-compatible (defaults to `Update`) with a new `add_system_to_stage`. `kaadan_scene` transform propagation is now **recursive (any depth)** and auto-inserts `GlobalTransform`. `kaadan_physics` systems moved to **`FixedUpdate`**. `kaadan_app::Engine` registers transform propagation in `PostUpdate` and gained `add_plugin`/`add_system_to_stage`. Corrected the false "parallel execution" doc on `kaadan_ecs` (it is deterministic single-threaded). All green (52 tests).

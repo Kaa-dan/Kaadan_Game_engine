@@ -1,16 +1,19 @@
-//! Entity-Component-System built on [`hecs`] with parallel system execution.
+//! Entity-Component-System built on [`hecs`], with a staged, single-threaded
+//! system scheduler and a fixed-timestep main loop.
 //!
 //! Manages game world state, entity spawning, and component queries.
 
 mod app;
+mod events;
 mod resources;
 mod schedule;
 mod time;
 mod world;
 
 pub use app::{App, Plugin};
+pub use events::Events;
 pub use resources::Resources;
-pub use schedule::{Schedule, SystemFn};
+pub use schedule::{Schedule, Stage, SystemFn};
 pub use time::Time;
 pub use world::{Component, Entity, Query, QueryBorrow, Ref, RefMut, World};
 
@@ -89,5 +92,32 @@ mod tests {
 
         app.tick();
         assert_eq!(app.world.len(), 100);
+    }
+
+    #[test]
+    fn fixed_update_is_capped_per_tick() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+        use std::time::Duration;
+
+        // Count FixedUpdate invocations within a single tick.
+        let counter = Rc::new(RefCell::new(0u32));
+        let c = counter.clone();
+
+        let mut app = App::new();
+        app.add_system_to_stage(Stage::FixedUpdate, "count", move |_, _| {
+            *c.borrow_mut() += 1;
+        });
+
+        // Prime a huge backlog (clamped to 250ms by Time = ~15 steps at 60Hz),
+        // so the per-tick cap (MAX_FIXED_STEPS = 8) is what limits the count.
+        // This makes the assertion deterministic regardless of wall-clock jitter.
+        app.resources
+            .get_mut::<Time>()
+            .unwrap()
+            .advance(Duration::from_secs(10));
+        app.tick();
+
+        assert_eq!(*counter.borrow(), 8);
     }
 }

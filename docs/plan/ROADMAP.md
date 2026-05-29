@@ -388,7 +388,7 @@ graph LR
 ### Progress
 
 - [x] P1 Foundation & CI ✅ (2026-05-30)
-- [ ] P2 Core Runtime
+- [x] P2 Core Runtime ✅ (2026-05-30)
 - [ ] P3 2D + In-Game UI
 - [ ] P4 3D PBR + glTF
 - [ ] P5 Asset Pipeline

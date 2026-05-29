@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use kaadan_ecs::{App, Resources, World};
+use kaadan_ecs::{App, Plugin, Resources, Stage, World};
 use kaadan_input::InputState;
 use kaadan_math::{Color, Handle, HandleAllocator, Mat4};
 use kaadan_platform::{AppHandler, InputEvent, LifecycleEvent, PlatformWindow};
@@ -141,6 +141,13 @@ impl Engine {
     pub fn new(target_fps: u32) -> Self {
         let mut app = App::new();
         app.insert_resource(InputState::new());
+        // Keep GlobalTransform up to date for the whole hierarchy each frame,
+        // after gameplay systems have run.
+        app.add_system_to_stage(
+            Stage::PostUpdate,
+            "transform_propagation",
+            kaadan_scene::transform_propagation_system,
+        );
         Self {
             app,
             render: None,
@@ -168,6 +175,24 @@ impl Engine {
         system: impl FnMut(&mut World, &mut Resources) + 'static,
     ) -> Self {
         self.app.add_system(name, system);
+        self
+    }
+
+    /// Register a system on a specific [`Stage`] (e.g. `FixedUpdate`).
+    pub fn add_system_to_stage(
+        mut self,
+        stage: Stage,
+        name: impl Into<String>,
+        system: impl FnMut(&mut World, &mut Resources) + 'static,
+    ) -> Self {
+        self.app.add_system_to_stage(stage, name, system);
+        self
+    }
+
+    /// Install a plugin (e.g. the physics plugin), which registers its own
+    /// resources and systems.
+    pub fn add_plugin(mut self, plugin: &dyn Plugin) -> Self {
+        self.app.add_plugin(plugin);
         self
     }
 

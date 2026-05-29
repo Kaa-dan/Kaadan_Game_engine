@@ -38,49 +38,86 @@ pub fn set_parent(world: &mut kaadan_ecs::World, child: Entity, parent: Entity) 
     let _ = world.inner_mut().insert_one(parent, Children(vec![child]));
 }
 
-/// System: propagate transforms down the hierarchy.
-/// Entities with no Parent get GlobalTransform = local Transform.
-/// Children get GlobalTransform = parent.GlobalTransform * child.Transform.
+/// System: propagate transforms down the hierarchy to any depth.
+///
+/// Each root (an entity with a `Transform` and no `Parent`) seeds the walk with
+/// its local transform; every descendant's `GlobalTransform` is computed as
+/// `parent_global * child_local` by depth-first recursion. `GlobalTransform` is
+/// inserted if missing, so callers don't have to pre-add it.
+///
+/// Assumes the hierarchy is a forest (no cycles), which [`set_parent`] upholds.
 pub fn transform_propagation_system(
     world: &mut kaadan_ecs::World,
     _resources: &mut kaadan_ecs::Resources,
 ) {
-    // First pass: update root entities (no Parent)
     let roots: Vec<(Entity, Transform)> = world
-        .query::<(&Transform,)>()
+        .query::<&Transform>()
         .without::<&Parent>()
         .iter()
-        .map(|(e, (t,))| (e, *t))
+        .map(|(e, t)| (e, *t))
         .collect();
 
-    for (entity, transform) in &roots {
-        if let Ok(mut global) = world.get_mut::<GlobalTransform>(*entity) {
-            global.0 = *transform;
-        }
+    for (entity, local) in roots {
+        propagate(world, entity, local);
     }
+}
 
-    // Second pass: propagate to children
-    let parent_list: Vec<(Entity, Vec<Entity>)> = world
-        .query::<(&Children,)>()
-        .iter()
-        .map(|(e, (c,))| (e, c.0.clone()))
-        .collect();
+/// Write `entity`'s `GlobalTransform`, then recurse into its children.
+fn propagate(world: &mut kaadan_ecs::World, entity: Entity, global: Transform) {
+    set_global(world, entity, global);
 
-    for (parent_entity, children) in &parent_list {
-        let parent_global = world
-            .get::<GlobalTransform>(*parent_entity)
-            .map(|g| g.0)
+    let children = world
+        .get::<Children>(entity)
+        .map(|c| c.0.clone())
+        .unwrap_or_default();
+
+    for child in children {
+        let child_local = world
+            .get::<Transform>(child)
+            .map(|t| *t)
             .unwrap_or(Transform::IDENTITY);
+        propagate(world, child, global.mul_transform(&child_local));
+    }
+}
 
-        for &child in children {
-            let child_local = world
-                .get::<Transform>(child)
-                .map(|t| *t)
-                .unwrap_or(Transform::IDENTITY);
-            let child_global = parent_global.mul_transform(&child_local);
-            if let Ok(mut global) = world.get_mut::<GlobalTransform>(child) {
-                global.0 = child_global;
-            }
-        }
+fn set_global(world: &mut kaadan_ecs::World, entity: Entity, transform: Transform) {
+    // Assigning to a bool ends the mutable borrow from get_mut before the
+    // inner_mut() insert in the missing-component case.
+    let updated = if let Ok(mut global) = world.get_mut::<GlobalTransform>(entity) {
+        global.0 = transform;
+        true
+    } else {
+        false
+    };
+    if !updated {
+        let _ = world
+            .inner_mut()
+            .insert_one(entity, GlobalTransform(transform));
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use kaadan_ecs::{Resources, World};
+    use kaadan_math::Vec3;
+
+    #[test]
+    fn propagates_through_grandchildren() {
+        let mut world = World::new();
+        // Spawn without GlobalTransform to also exercise auto-insertion.
+        let root = world.spawn((Transform::from_position(Vec3::new(10.0, 0.0, 0.0)),));
+        let child = world.spawn((Transform::from_position(Vec3::new(0.0, 5.0, 0.0)),));
+        let grandchild = world.spawn((Transform::from_position(Vec3::new(0.0, 0.0, 2.0)),));
+        set_parent(&mut world, child, root);
+        set_parent(&mut world, grandchild, child);
+
+        let mut resources = Resources::new();
+        transform_propagation_system(&mut world, &mut resources);
+
+        let g = world.get::<GlobalTransform>(grandchild).unwrap();
+        assert_eq!(g.0.position, Vec3::new(10.0, 5.0, 2.0));
+        let c = world.get::<GlobalTransform>(child).unwrap();
+        assert_eq!(c.0.position, Vec3::new(10.0, 5.0, 0.0));
     }
 }

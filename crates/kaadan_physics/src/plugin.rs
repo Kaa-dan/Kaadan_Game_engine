@@ -1,4 +1,4 @@
-use kaadan_ecs::{App, Entity, Plugin, Resources, World};
+use kaadan_ecs::{App, Entity, Plugin, Resources, Stage, World};
 use kaadan_math::{Quat, Transform, Vec2};
 use rapier2d::prelude::*;
 
@@ -27,9 +27,15 @@ impl PhysicsPlugin {
 impl Plugin for PhysicsPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(PhysicsWorld::with_gravity(self.gravity));
-        app.add_system("physics_sync", physics_sync_system);
-        app.add_system("physics_step", physics_step_system);
-        app.add_system("physics_writeback", physics_writeback_system);
+        // Physics runs in FixedUpdate for framerate-independent, deterministic
+        // simulation. sync (create bodies) -> step -> writeback to ECS.
+        app.add_system_to_stage(Stage::FixedUpdate, "physics_sync", physics_sync_system);
+        app.add_system_to_stage(Stage::FixedUpdate, "physics_step", physics_step_system);
+        app.add_system_to_stage(
+            Stage::FixedUpdate,
+            "physics_writeback",
+            physics_writeback_system,
+        );
     }
 }
 
@@ -148,6 +154,9 @@ mod tests {
 
     #[test]
     fn dynamic_body_falls_under_gravity() {
+        use kaadan_ecs::Time;
+        use std::time::Duration;
+
         let mut app = App::new();
         app.add_plugin(&PhysicsPlugin::default());
 
@@ -159,7 +168,14 @@ mod tests {
         ));
 
         let start_y = app.world.get::<Transform>(entity).unwrap().position.y;
-        for _ in 0..60 {
+        // Physics is in FixedUpdate now, so drive the clock deterministically:
+        // advance one fixed step per tick (~120 steps = 2s of simulation).
+        let fixed_dt = app.resources.get::<Time>().unwrap().fixed_delta_seconds();
+        for _ in 0..120 {
+            app.resources
+                .get_mut::<Time>()
+                .unwrap()
+                .advance(Duration::from_secs_f32(fixed_dt));
             app.tick();
         }
         let end_y = app.world.get::<Transform>(entity).unwrap().position.y;
