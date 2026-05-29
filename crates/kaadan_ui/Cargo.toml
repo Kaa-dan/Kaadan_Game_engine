@@ -12,5 +12,11 @@ workspace = true
 [dependencies]
 kaadan_math.workspace = true
 kaadan_core.workspace = true
+kaadan_ecs.workspace = true
+kaadan_scene.workspace = true
+kaadan_input.workspace = true
 fontdue.workspace = true
 tracing.workspace = true
+
+[dev-dependencies]
+kaadan_platform.workspace = true

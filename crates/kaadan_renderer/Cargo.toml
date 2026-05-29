@@ -9,6 +9,10 @@ description = "GPU rendering backend for KaadanEngine (wgpu)"
 [lints]
 workspace = true
 
+[features]
+default = ["gltf"]
+gltf = ["dep:gltf"]
+
 [dependencies]
 wgpu.workspace = true
 pollster.workspace = true
@@ -16,5 +20,7 @@ bytemuck.workspace = true
 tracing.workspace = true
 raw-window-handle.workspace = true
 image.workspace = true
+gltf = { workspace = true, optional = true }
 kaadan_math.workspace = true
 kaadan_core.workspace = true
+kaadan_ecs.workspace = true

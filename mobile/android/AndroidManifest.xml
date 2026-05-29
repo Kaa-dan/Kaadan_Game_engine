@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- KaadanEngine Android manifest (scaffold). Uses NativeActivity so the engine
+     runs entirely from native code. `android.app.lib_name` must match the
+     cdylib produced by the app crate (android_main entry point). -->
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    package="dev.kaadan.engine">
+
+    <uses-sdk android:minSdkVersion="24" android:targetSdkVersion="34" />
+    <uses-feature android:glEsVersion="0x00030000" android:required="true" />
+
+    <application
+        android:label="KaadanEngine"
+        android:hasCode="false"
+        android:allowBackup="false">
+
+        <activity
+            android:name="android.app.NativeActivity"
+            android:configChanges="orientation|keyboardHidden|screenSize|screenLayout|density"
+            android:screenOrientation="landscape"
+            android:exported="true">
+
+            <meta-data
+                android:name="android.app.lib_name"
+                android:value="kaadan_app" />
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+    </application>
+</manifest>

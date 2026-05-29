@@ -7,6 +7,7 @@ pub struct Texture {
 }
 
 impl Texture {
+    /// Create a texture from encoded image bytes (PNG/JPEG).
     pub fn from_bytes(
         device: &wgpu::Device,
         queue: &wgpu::Queue,
@@ -20,7 +21,18 @@ impl Texture {
             })?;
         let rgba = img.to_rgba8();
         let (width, height) = (rgba.width(), rgba.height());
+        Ok(Self::from_rgba8(device, queue, &rgba, width, height, label))
+    }
 
+    /// Create a texture from raw RGBA8 pixels.
+    pub fn from_rgba8(
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        pixels: &[u8],
+        width: u32,
+        height: u32,
+        label: &str,
+    ) -> Self {
         let size = wgpu::Extent3d {
             width,
             height,
@@ -44,7 +56,7 @@ impl Texture {
                 origin: wgpu::Origin3d::ZERO,
                 aspect: wgpu::TextureAspect::All,
             },
-            &rgba,
+            pixels,
             wgpu::ImageDataLayout {
                 offset: 0,
                 bytes_per_row: Some(4 * width),
@@ -62,12 +74,12 @@ impl Texture {
             ..Default::default()
         });
 
-        Ok(Self {
+        Self {
             texture,
             view,
             sampler,
             width,
             height,
-        })
+        }
     }
 }

@@ -9,7 +9,13 @@ description = "Application entry point and engine orchestration for KaadanEngine
 [lints]
 workspace = true
 
+[features]
+default = ["gltf"]
+gltf = ["kaadan_renderer/gltf"]
+profiling = ["dep:puffin"]
+
 [dependencies]
+puffin = { workspace = true, optional = true }
 kaadan_math.workspace = true
 kaadan_core.workspace = true
 kaadan_platform.workspace = true
@@ -22,3 +28,4 @@ kaadan_scene.workspace = true
 kaadan_ui.workspace = true
 kaadan_physics.workspace = true
 tracing.workspace = true
+wgpu.workspace = true

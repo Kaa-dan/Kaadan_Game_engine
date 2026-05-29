@@ -19,7 +19,7 @@ impl Renderer {
     /// Create renderer from a platform window.
     /// Uses pollster to block on async wgpu init (acceptable at startup).
     pub fn new(
-        window: &(impl HasWindowHandle + HasDisplayHandle),
+        window: &(impl HasWindowHandle + HasDisplayHandle + ?Sized),
         width: u32,
         height: u32,
     ) -> Result<Self, kaadan_core::KaadanError> {
@@ -27,7 +27,7 @@ impl Renderer {
     }
 
     async fn new_async(
-        window: &(impl HasWindowHandle + HasDisplayHandle),
+        window: &(impl HasWindowHandle + HasDisplayHandle + ?Sized),
         width: u32,
         height: u32,
     ) -> Result<Self, kaadan_core::KaadanError> {

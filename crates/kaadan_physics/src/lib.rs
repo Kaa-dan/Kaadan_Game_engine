@@ -6,6 +6,10 @@ mod components;
 mod plugin;
 mod world;
 
-pub use components::{Collider, ColliderShape, CollisionEvent, RigidBody, RigidBodyType, Velocity};
-pub use plugin::PhysicsPlugin;
-pub use world::PhysicsWorld;
+pub use components::{
+    Collider, ColliderShape, CollisionEvent, CollisionEventType, RigidBody, RigidBodyType, Velocity,
+};
+pub use plugin::{
+    physics_step_system, physics_sync_system, physics_writeback_system, PhysicsPlugin,
+};
+pub use world::{PhysicsWorld, RaycastHit};

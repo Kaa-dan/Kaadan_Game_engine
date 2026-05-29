@@ -64,6 +64,12 @@ fontdue = "0.9"
 rapier2d = { version = "0.22", features = ["simd-stable"] }
 parry2d = "0.17"
 
+# 3D model loading
+gltf = { version = "1.4", default-features = false, features = ["import", "utils"] }
+
+# Profiling
+puffin = "0.19"
+
 # Internal crates
 kaadan_math = { path = "crates/kaadan_math" }
 kaadan_core = { path = "crates/kaadan_core" }
@@ -95,3 +101,10 @@ redundant_clone = { level = "warn" }
 # Style
 module_name_repetitions = { level = "allow" }
 too_many_arguments = { level = "allow" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"

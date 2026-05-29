@@ -79,6 +79,15 @@ pub enum AlignItems {
     End,
 }
 
+/// Pointer interaction state for an interactive node.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum InteractionState {
+    #[default]
+    None,
+    Hovered,
+    Pressed,
+}
+
 /// Component: a UI node with style and computed layout.
 pub struct UiNode {
     pub style: UiStyle,
@@ -88,6 +97,10 @@ pub struct UiNode {
     pub background: Color,
     /// Whether this node is visible
     pub visible: bool,
+    /// Whether this node receives pointer interaction
+    pub interactive: bool,
+    /// Current pointer interaction state (updated by the interaction system)
+    pub state: InteractionState,
 }
 
 impl Default for UiNode {
@@ -97,6 +110,8 @@ impl Default for UiNode {
             computed_rect: Rect::new(Vec2::ZERO, Vec2::ZERO),
             background: Color::TRANSPARENT,
             visible: true,
+            interactive: false,
+            state: InteractionState::None,
         }
     }
 }

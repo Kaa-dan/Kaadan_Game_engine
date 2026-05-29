@@ -17,6 +17,27 @@ impl Default for GlobalTransform {
     }
 }
 
+/// Attach `child` to `parent`, maintaining both [`Parent`] and [`Children`]
+/// components. Removes the child from any previous parent's list.
+pub fn set_parent(world: &mut kaadan_ecs::World, child: Entity, parent: Entity) {
+    // Detach from a previous parent, if any.
+    if let Ok(prev) = world.get::<Parent>(child).map(|p| p.0) {
+        if let Ok(mut children) = world.get_mut::<Children>(prev) {
+            children.0.retain(|&e| e != child);
+        }
+    }
+
+    let _ = world.inner_mut().insert_one(child, Parent(parent));
+
+    if let Ok(mut children) = world.get_mut::<Children>(parent) {
+        if !children.0.contains(&child) {
+            children.0.push(child);
+        }
+        return;
+    }
+    let _ = world.inner_mut().insert_one(parent, Children(vec![child]));
+}
+
 /// System: propagate transforms down the hierarchy.
 /// Entities with no Parent get GlobalTransform = local Transform.
 /// Children get GlobalTransform = parent.GlobalTransform * child.Transform.
