@@ -10,7 +10,5 @@ description = "Audio playback for KaadanEngine"
 workspace = true
 
 [dependencies]
-kaadan_math.workspace = true
 kaadan_core.workspace = true
 rodio.workspace = true
-tracing.workspace = true

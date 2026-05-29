@@ -1340,16 +1340,13 @@ name = "kaadan_audio"
 version = "0.1.0"
 dependencies = [
  "kaadan_core",
- "kaadan_math",
  "rodio",
- "tracing",
 ]
 
 [[package]]
 name = "kaadan_core"
 version = "0.1.0"
 dependencies = [
- "kaadan_math",
  "thiserror 2.0.18",
  "tracing",
  "tracing-subscriber",
@@ -1380,6 +1377,8 @@ dependencies = [
  "kaadan_scene",
  "pollster",
  "raw-window-handle",
+ "ron",
+ "serde",
  "tracing",
  "tracing-subscriber",
  "wgpu",
@@ -1404,18 +1403,16 @@ dependencies = [
  "bytemuck",
  "glam",
  "serde",
+ "serde_json",
 ]
 
 [[package]]
 name = "kaadan_physics"
 version = "0.1.0"
 dependencies = [
- "kaadan_core",
  "kaadan_ecs",
  "kaadan_math",
- "parry2d",
  "rapier2d",
- "tracing",
 ]
 
 [[package]]
@@ -1468,7 +1465,6 @@ dependencies = [
  "kaadan_math",
  "kaadan_platform",
  "kaadan_scene",
- "tracing",
 ]
 
 [[package]]

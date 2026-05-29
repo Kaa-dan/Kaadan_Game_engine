@@ -3,6 +3,7 @@ use bytemuck::{Pod, Zeroable};
 /// Linear RGBA color. GPU-ready. Alpha is NOT premultiplied at storage;
 /// premultiply in the shader or batch step.
 #[derive(Debug, Clone, Copy, PartialEq, Pod, Zeroable)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 #[repr(C)]
 pub struct Color {
     pub r: f32,

@@ -89,4 +89,29 @@ mod tests {
         alloc.free(h2);
         assert_eq!(alloc.live_count(), 0);
     }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn serde_roundtrip() {
+        let transform = Transform {
+            position: Vec3::new(1.0, 2.0, 3.0),
+            rotation: Quat::from_rotation_y(0.5),
+            scale: Vec3::new(2.0, 2.0, 2.0),
+        };
+        let json = serde_json::to_string(&transform).unwrap();
+        let back: Transform = serde_json::from_str(&json).unwrap();
+        assert_eq!(transform, back);
+
+        let color = Color::new(0.1, 0.2, 0.3, 0.4);
+        let back: Color = serde_json::from_str(&serde_json::to_string(&color).unwrap()).unwrap();
+        assert_eq!(color, back);
+
+        let rect = Rect::new(Vec2::ZERO, Vec2::new(4.0, 5.0));
+        let back: Rect = serde_json::from_str(&serde_json::to_string(&rect).unwrap()).unwrap();
+        assert_eq!(rect, back);
+
+        let aabb = AABB::new(Vec3::ZERO, Vec3::splat(3.0));
+        let back: AABB = serde_json::from_str(&serde_json::to_string(&aabb).unwrap()).unwrap();
+        assert_eq!(aabb, back);
+    }
 }
