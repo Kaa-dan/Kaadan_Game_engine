@@ -10,6 +10,7 @@ mod mesh;
 mod mesh3d;
 mod pbr_renderer;
 mod pipeline;
+mod render_target;
 mod renderer;
 mod sprite;
 mod sprite_batch;
@@ -32,6 +33,7 @@ pub use pipeline::{
     create_basic_pipeline, create_pbr_pipeline, create_sprite_pipeline,
     sprite_camera_bind_group_layout, sprite_texture_bind_group_layout,
 };
+pub use render_target::RenderTarget;
 pub use renderer::{FrameContext, Renderer};
 pub use sprite::Sprite;
 pub use sprite_batch::{DrawCall, SpriteBatch, SpriteVertex};

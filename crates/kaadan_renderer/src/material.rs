@@ -3,6 +3,7 @@ use kaadan_math::{Color, Handle};
 use crate::texture::Texture;
 
 /// PBR metallic-roughness material.
+#[derive(Clone)]
 pub struct PbrMaterial {
     pub base_color: Color,
     pub base_color_texture: Option<Handle<Texture>>,
@@ -28,6 +29,7 @@ impl Default for PbrMaterial {
 }
 
 /// Component: directional light (sun-like).
+#[derive(Clone)]
 pub struct DirectionalLight {
     pub direction: kaadan_math::Vec3,
     pub color: Color,
@@ -45,6 +47,7 @@ impl Default for DirectionalLight {
 }
 
 /// Component: point light.
+#[derive(Clone)]
 pub struct PointLight {
     pub color: Color,
     pub intensity: f32,

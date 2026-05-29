@@ -13,6 +13,7 @@ members = [
     "crates/kaadan_ui",
     "crates/kaadan_physics",
     "crates/kaadan_app",
+    "crates/kaadan_editor",
 ]
 
 [workspace.package]
@@ -69,6 +70,11 @@ gltf = { version = "1.4", default-features = false, features = ["import", "utils
 
 # Profiling
 puffin = "0.19"
+
+# Editor GUI (egui 0.30.x targets wgpu 23 / winit 0.30)
+egui = "0.30"
+egui-wgpu = "0.30"
+egui-winit = { version = "0.30", default-features = false }
 
 # Internal crates
 kaadan_math = { path = "crates/kaadan_math" }
