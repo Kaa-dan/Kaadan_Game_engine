@@ -391,7 +391,7 @@ graph LR
 - [x] P2 Core Runtime ✅ (2026-05-30)
 - [x] P3 2D + In-Game UI ✅ (2026-05-30) — *quad rendering; text glyphs deferred (needs bundled font)*
 - [x] P4 3D PBR + perf ✅ (2026-05-30) — *real Cook-Torrance PBR + no per-frame alloc; glTF texture loading moved to P5*
-- [ ] P5 Asset Pipeline
+- [x] P5 Asset Pipeline ✅ (2026-05-30) — *async loading + functional hot-reload + audio loader; glTF-texture/GPU-upload + processed cache deferred (engine/editor coupling)*
 - [ ] P6 Scripting
 - [ ] P7 Editor Shell
 - [ ] P8 Integrated Code Editor

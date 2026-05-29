@@ -32,3 +32,26 @@ impl AssetLoader for ImageLoader {
         &["png", "jpg", "jpeg"]
     }
 }
+
+/// An audio clip holding raw, still-encoded bytes (WAV/OGG/MP3/FLAC). Decoding
+/// is deferred to `kaadan_audio`, which consumes these bytes directly.
+pub struct AudioClip {
+    pub bytes: Vec<u8>,
+}
+
+/// Loads audio files by storing their raw encoded bytes verbatim.
+pub struct AudioLoader;
+
+impl AssetLoader for AudioLoader {
+    type Output = AudioClip;
+
+    fn load(&self, bytes: &[u8], _path: &str) -> Result<Self::Output, kaadan_core::KaadanError> {
+        Ok(AudioClip {
+            bytes: bytes.to_vec(),
+        })
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["wav", "ogg", "mp3", "flac"]
+    }
+}

@@ -50,6 +50,40 @@ impl<T> AssetStorage<T> {
         handle
     }
 
+    /// Reserve a handle for a path that is being loaded asynchronously. The
+    /// asset is not present yet; state starts at [`LoadState::Queued`]. Later,
+    /// [`AssetStorage::set_state`] and [`AssetStorage::fulfill`] complete it.
+    pub fn reserve(&mut self, path: impl Into<String>) -> Handle<T> {
+        let handle = self.allocator.allocate();
+        self.states.insert(handle.index(), LoadState::Queued);
+        self.path_to_handle.insert(path.into(), handle);
+        handle
+    }
+
+    /// Update the load state for a handle without touching its asset.
+    /// Returns false if the handle is no longer valid.
+    pub fn set_state(&mut self, handle: Handle<T>, state: LoadState) -> bool {
+        if self.allocator.is_valid(handle) {
+            self.states.insert(handle.index(), state);
+            true
+        } else {
+            false
+        }
+    }
+
+    /// Store an asset at an already-reserved handle and mark it Loaded.
+    /// Used both to complete an async load and to hot-reload in place.
+    /// Returns false if the handle is no longer valid.
+    pub fn fulfill(&mut self, handle: Handle<T>, asset: T) -> bool {
+        if self.allocator.is_valid(handle) {
+            self.assets.insert(handle.index(), asset);
+            self.states.insert(handle.index(), LoadState::Loaded);
+            true
+        } else {
+            false
+        }
+    }
+
     /// Current load state for a handle.
     pub fn state(&self, handle: Handle<T>) -> Option<LoadState> {
         if self.allocator.is_valid(handle) {

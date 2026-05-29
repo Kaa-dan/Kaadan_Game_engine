@@ -2,6 +2,7 @@
 //!
 //! Supports images and custom asset types via the [`AssetLoader`] trait.
 
+mod async_io;
 mod group;
 mod loader;
 mod loaders;
@@ -14,7 +15,7 @@ mod hot_reload;
 
 pub use group::AssetGroup;
 pub use loader::AssetLoader;
-pub use loaders::{ImageAsset, ImageLoader};
+pub use loaders::{AudioClip, AudioLoader, ImageAsset, ImageLoader};
 pub use resolver::{AssetResolver, FilesystemResolver};
 pub use server::AssetServer;
 pub use storage::AssetStorage;
@@ -149,5 +150,136 @@ mod tests {
         fn extensions(&self) -> &[&str] {
             &["png"]
         }
+    }
+
+    // ----- Test helpers for async / reload / audio -----
+
+    /// Trivial loader that returns the bytes as a UTF-8 string, so reload tests
+    /// can assert exact content with no decode fuzz.
+    struct TextLoader;
+    impl AssetLoader for TextLoader {
+        type Output = String;
+        fn load(&self, bytes: &[u8], path: &str) -> Result<String, kaadan_core::KaadanError> {
+            String::from_utf8(bytes.to_vec()).map_err(|e| kaadan_core::KaadanError::AssetLoad {
+                path: path.to_string(),
+                reason: e.to_string(),
+            })
+        }
+        fn extensions(&self) -> &[&str] {
+            &["txt"]
+        }
+    }
+
+    /// Create a unique temp directory for a test (avoids the `tempfile` dep).
+    fn unique_temp_dir(tag: &str) -> std::path::PathBuf {
+        let nanos = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos();
+        let dir = std::env::temp_dir().join(format!("kaadan_assets_{tag}_{nanos}"));
+        std::fs::create_dir_all(&dir).unwrap();
+        dir
+    }
+
+    /// Spin `poll()` until the handle leaves Queued, with bounded retries.
+    fn poll_until_settled<T: Send + Sync + 'static>(
+        server: &mut AssetServer,
+        handle: kaadan_math::Handle<T>,
+    ) -> LoadState {
+        for _ in 0..200 {
+            server.poll();
+            match server.load_state(handle) {
+                Some(LoadState::Loaded) => return LoadState::Loaded,
+                Some(LoadState::Failed) => return LoadState::Failed,
+                _ => std::thread::sleep(std::time::Duration::from_millis(5)),
+            }
+        }
+        panic!("async load did not settle within retry budget");
+    }
+
+    #[test]
+    fn load_async_image_succeeds() {
+        let dir = unique_temp_dir("async_ok");
+        std::fs::write(dir.join("sprite.png"), make_png(8, 4)).unwrap();
+        let mut server = AssetServer::new(FilesystemResolver::new(&dir));
+
+        let handle = server.load_async("sprite.png", ImageLoader);
+        // Returns immediately, still Queued (not yet polled).
+        assert_eq!(server.load_state(handle), Some(LoadState::Queued));
+        assert!(!server.is_loaded(handle));
+
+        assert_eq!(poll_until_settled(&mut server, handle), LoadState::Loaded);
+        let img = server.get(handle).expect("image present after poll");
+        assert_eq!((img.width, img.height), (8, 4));
+
+        // Re-requesting the same path returns the same handle.
+        let again = server.load_async("sprite.png", ImageLoader);
+        assert!(again == handle);
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn load_async_missing_file_fails() {
+        let dir = unique_temp_dir("async_fail");
+        let mut server = AssetServer::new(FilesystemResolver::new(&dir));
+
+        let handle = server.load_async("nope.png", ImageLoader);
+        assert_eq!(server.load_state(handle), Some(LoadState::Queued));
+        assert_eq!(poll_until_settled(&mut server, handle), LoadState::Failed);
+        assert!(server.get(handle).is_none());
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn reload_path_replaces_asset() {
+        let dir = unique_temp_dir("reload");
+        let file = dir.join("note.txt");
+        std::fs::write(&file, b"original").unwrap();
+        let mut server = AssetServer::new(FilesystemResolver::new(&dir));
+
+        // Load via async (which registers a reloader) and wait for it.
+        let handle = server.load_async::<String, _>("note.txt", TextLoader);
+        assert_eq!(poll_until_settled(&mut server, handle), LoadState::Loaded);
+        assert_eq!(server.get(handle).map(String::as_str), Some("original"));
+        assert!(server.is_reloadable("note.txt"));
+        assert_eq!(server.reload_version("note.txt"), 0);
+
+        // Change the file on disk and reload in place.
+        std::fs::write(&file, b"updated contents").unwrap();
+        assert!(server.reload_path("note.txt"));
+
+        // Same handle, new contents, bumped version.
+        assert_eq!(
+            server.get(handle).map(String::as_str),
+            Some("updated contents")
+        );
+        assert!(server.is_loaded(handle));
+        assert_eq!(server.reload_version("note.txt"), 1);
+
+        // Reloading an unknown path is a no-op returning false.
+        assert!(!server.reload_path("ghost.txt"));
+
+        std::fs::remove_dir_all(&dir).ok();
+    }
+
+    #[test]
+    fn audio_loader_returns_bytes() {
+        let raw = vec![1u8, 2, 3, 4, 5, 250];
+
+        // Direct loader use.
+        let clip = AudioLoader.load(&raw, "boom.wav").unwrap();
+        assert_eq!(clip.bytes, raw);
+
+        // Through the server.
+        let mut server = AssetServer::new(PngResolver { bytes: raw.clone() });
+        let handle = server.load("boom.wav", &AudioLoader);
+        assert!(server.is_loaded(handle));
+        assert_eq!(server.get(handle).unwrap().bytes, raw);
+
+        // Extensions registered.
+        assert!(AudioLoader.extensions().contains(&"ogg"));
+        assert!(AudioLoader.extensions().contains(&"mp3"));
     }
 }
