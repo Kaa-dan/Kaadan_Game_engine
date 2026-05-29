@@ -41,6 +41,8 @@ gilrs = "0.11"
 # Rendering
 wgpu = "23"
 pollster = "0.4"
+# Shader front-end/validator (dev-only); major must match the wgpu 23 toolchain.
+naga = { version = "23", features = ["wgsl-in"] }
 
 # ECS
 hecs = "0.10"

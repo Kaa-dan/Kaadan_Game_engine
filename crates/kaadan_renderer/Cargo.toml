@@ -24,3 +24,6 @@ gltf = { workspace = true, optional = true }
 kaadan_math.workspace = true
 kaadan_core.workspace = true
 kaadan_ecs.workspace = true
+
+[dev-dependencies]
+naga.workspace = true

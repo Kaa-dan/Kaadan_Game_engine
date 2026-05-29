@@ -1436,6 +1436,7 @@ dependencies = [
  "kaadan_core",
  "kaadan_ecs",
  "kaadan_math",
+ "naga",
  "pollster",
  "raw-window-handle",
  "tracing",

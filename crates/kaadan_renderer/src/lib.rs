@@ -53,8 +53,12 @@ pub const BASIC_SHADER: &str = include_str!("../../../assets/shaders/basic.wgsl"
 /// Sprite WGSL shader source with camera + texture sampling.
 pub const SPRITE_SHADER: &str = include_str!("../../../assets/shaders/sprite.wgsl");
 
-/// PBR WGSL shader source for lit 3D meshes.
+/// PBR WGSL shader source for lit 3D meshes (full Cook-Torrance).
 pub const PBR_SHADER: &str = include_str!("../../../assets/shaders/pbr.wgsl");
+
+/// Cheaper PBR variant for low-end/mobile GPUs (single directional light, up to
+/// two point lights, no normal mapping). Shares `pbr.wgsl`'s bind-group layout.
+pub const PBR_MOBILE_SHADER: &str = include_str!("../../../assets/shaders/pbr_mobile.wgsl");
 
 /// UI WGSL shader source for screen-space quads.
 pub const UI_SHADER: &str = include_str!("../../../assets/shaders/ui.wgsl");

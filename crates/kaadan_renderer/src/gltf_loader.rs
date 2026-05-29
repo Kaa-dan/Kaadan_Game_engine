@@ -84,6 +84,7 @@ pub fn load_gltf(bytes: &[u8], path: &str) -> Result<GltfModel, KaadanError> {
             metallic_roughness_texture: None,
             normal_texture: None,
             emissive: Color::new(em[0], em[1], em[2], 1.0),
+            emissive_texture: None,
         });
     }
 

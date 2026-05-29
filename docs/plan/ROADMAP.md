@@ -390,7 +390,7 @@ graph LR
 - [x] P1 Foundation & CI ✅ (2026-05-30)
 - [x] P2 Core Runtime ✅ (2026-05-30)
 - [x] P3 2D + In-Game UI ✅ (2026-05-30) — *quad rendering; text glyphs deferred (needs bundled font)*
-- [ ] P4 3D PBR + glTF
+- [x] P4 3D PBR + perf ✅ (2026-05-30) — *real Cook-Torrance PBR + no per-frame alloc; glTF texture loading moved to P5*
 - [ ] P5 Asset Pipeline
 - [ ] P6 Scripting
 - [ ] P7 Editor Shell

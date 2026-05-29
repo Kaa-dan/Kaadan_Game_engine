@@ -12,6 +12,7 @@ pub struct PbrMaterial {
     pub metallic_roughness_texture: Option<Handle<Texture>>,
     pub normal_texture: Option<Handle<Texture>>,
     pub emissive: Color,
+    pub emissive_texture: Option<Handle<Texture>>,
 }
 
 impl Default for PbrMaterial {
@@ -24,6 +25,7 @@ impl Default for PbrMaterial {
             metallic_roughness_texture: None,
             normal_texture: None,
             emissive: Color::BLACK,
+            emissive_texture: None,
         }
     }
 }
