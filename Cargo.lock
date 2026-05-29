@@ -855,6 +855,16 @@ dependencies = [
 ]
 
 [[package]]
+name = "game_template"
+version = "0.1.0"
+dependencies = [
+ "kaadan_ecs",
+ "kaadan_math",
+ "kaadan_renderer",
+ "kaadan_script",
+]
+
+[[package]]
 name = "gethostname"
 version = "1.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1453,6 +1463,18 @@ dependencies = [
  "ron",
  "serde",
  "tracing",
+]
+
+[[package]]
+name = "kaadan_script"
+version = "0.1.0"
+dependencies = [
+ "kaadan_core",
+ "kaadan_ecs",
+ "kaadan_math",
+ "kaadan_renderer",
+ "libloading",
+ "thiserror 2.0.18",
 ]
 
 [[package]]

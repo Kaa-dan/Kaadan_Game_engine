@@ -14,6 +14,8 @@ members = [
     "crates/kaadan_physics",
     "crates/kaadan_app",
     "crates/kaadan_editor",
+    "crates/kaadan_script",
+    "templates/game_template",
 ]
 
 [workspace.package]
@@ -68,6 +70,9 @@ parry2d = "0.17"
 # 3D model loading
 gltf = { version = "1.4", default-features = false, features = ["import", "utils"] }
 
+# Scripting (dylib hot-reload)
+libloading = "0.8"
+
 # Profiling
 puffin = "0.19"
 
@@ -88,6 +93,7 @@ kaadan_assets = { path = "crates/kaadan_assets" }
 kaadan_scene = { path = "crates/kaadan_scene" }
 kaadan_ui = { path = "crates/kaadan_ui" }
 kaadan_physics = { path = "crates/kaadan_physics" }
+kaadan_script = { path = "crates/kaadan_script" }
 
 [workspace.lints.clippy]
 # Correctness

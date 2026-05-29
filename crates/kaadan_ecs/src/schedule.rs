@@ -73,6 +73,16 @@ impl Schedule {
         });
     }
 
+    /// Remove every system with the given name from all stages.
+    ///
+    /// Used by the scripting host to unregister a hot-reloaded plugin's systems
+    /// before re-registering them from the freshly loaded library.
+    pub fn remove_system(&mut self, name: &str) {
+        for stage in &mut self.stages {
+            stage.retain(|entry| entry.name != name);
+        }
+    }
+
     /// Run all systems registered for a single stage, in insertion order.
     pub fn run_stage(&mut self, stage: Stage, world: &mut World, resources: &mut Resources) {
         for entry in &mut self.stages[stage as usize] {

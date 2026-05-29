@@ -1,0 +1,26 @@
+[package]
+name = "kaadan_script"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Rust gameplay scripting via dylib hot-reload for KaadanEngine"
+
+[lints]
+workspace = true
+
+[features]
+default = ["hot_reload"]
+# Host-side dynamic loading. Disabled for statically-linked mobile builds
+# (iOS in particular), where gameplay is compiled directly into the binary.
+hot_reload = ["dep:libloading"]
+
+[dependencies]
+kaadan_ecs.workspace = true
+kaadan_math.workspace = true
+kaadan_core.workspace = true
+libloading = { workspace = true, optional = true }
+thiserror.workspace = true
+
+[dev-dependencies]
+kaadan_renderer.workspace = true

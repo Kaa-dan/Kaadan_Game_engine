@@ -392,7 +392,7 @@ graph LR
 - [x] P3 2D + In-Game UI ✅ (2026-05-30) — *quad rendering; text glyphs deferred (needs bundled font)*
 - [x] P4 3D PBR + perf ✅ (2026-05-30) — *real Cook-Torrance PBR + no per-frame alloc; glTF texture loading moved to P5*
 - [x] P5 Asset Pipeline ✅ (2026-05-30) — *async loading + functional hot-reload + audio loader; glTF-texture/GPU-upload + processed cache deferred (engine/editor coupling)*
-- [ ] P6 Scripting
+- [x] P6 Scripting ✅ (2026-05-30) — *kaadan_script (ScriptContext, ComponentRegistry, kaadan_game! macro, ScriptHost dylib hot-reload) + game_template (cdylib+rlib); hot-reload verified manually, static-link path in CI*
 - [ ] P7 Editor Shell
 - [ ] P8 Integrated Code Editor
 - [ ] P9 Android

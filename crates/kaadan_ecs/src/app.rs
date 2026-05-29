@@ -60,6 +60,13 @@ impl App {
         self
     }
 
+    /// Remove all systems with the given name (across every stage). Used by the
+    /// scripting host to unregister a reloaded plugin's systems.
+    pub fn remove_system(&mut self, name: &str) -> &mut Self {
+        self.schedule.remove_system(name);
+        self
+    }
+
     pub fn insert_resource<T: 'static>(&mut self, resource: T) -> &mut Self {
         self.resources.insert(resource);
         self

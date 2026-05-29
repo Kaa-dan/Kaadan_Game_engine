@@ -1,0 +1,20 @@
+[package]
+name = "game_template"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Template gameplay crate for KaadanEngine scripting (rlib + cdylib)"
+
+[lints]
+workspace = true
+
+[lib]
+# `rlib` for static-link (mobile / iOS) and tests; `cdylib` for hot-reload.
+crate-type = ["rlib", "cdylib"]
+
+[dependencies]
+kaadan_script.workspace = true
+kaadan_ecs.workspace = true
+kaadan_math.workspace = true
+kaadan_renderer.workspace = true

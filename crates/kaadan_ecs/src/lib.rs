@@ -95,6 +95,25 @@ mod tests {
     }
 
     #[test]
+    fn remove_system_stops_it_running() {
+        use std::cell::RefCell;
+        use std::rc::Rc;
+
+        let runs = Rc::new(RefCell::new(0u32));
+        let r = runs.clone();
+
+        let mut app = App::new();
+        app.add_system("counter", move |_, _| *r.borrow_mut() += 1);
+
+        app.tick();
+        assert_eq!(*runs.borrow(), 1);
+
+        app.remove_system("counter");
+        app.tick();
+        assert_eq!(*runs.borrow(), 1, "removed system must not run again");
+    }
+
+    #[test]
     fn fixed_update_is_capped_per_tick() {
         use std::cell::RefCell;
         use std::rc::Rc;
