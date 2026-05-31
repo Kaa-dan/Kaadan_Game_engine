@@ -393,7 +393,7 @@ graph LR
 - [x] P4 3D PBR + perf ✅ (2026-05-30) — *real Cook-Torrance PBR + no per-frame alloc; glTF texture loading moved to P5*
 - [x] P5 Asset Pipeline ✅ (2026-05-30) — *async loading + functional hot-reload + audio loader; glTF-texture/GPU-upload + processed cache deferred (engine/editor coupling)*
 - [x] P6 Scripting ✅ (2026-05-30) — *kaadan_script (ScriptContext, ComponentRegistry, kaadan_game! macro, ScriptHost dylib hot-reload) + game_template (cdylib+rlib); hot-reload verified manually, static-link path in CI*
-- [ ] P7 Editor Shell
+- [x] P7 Editor Shell ✅ (2026-05-31) — *egui_dock docking, rfd file dialogs, ComponentRegistry-driven inspector + Add/Remove Component, basic Assets panel. Deferred: undoable property/gizmo edits, scene-format unification into kaadan_scene, real play mode (App+ScriptHost) — see `docs/editor/p7-notes.md`*
 - [ ] P8 Integrated Code Editor
 - [ ] P9 Android
 - [ ] P10 iOS

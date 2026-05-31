@@ -18,12 +18,23 @@ pub fn show(ui: &mut egui::Ui, state: &mut EditorState, world: &mut World) {
     egui::menu::bar(ui, |ui| {
         ui.menu_button("File", |ui| {
             if ui.button("Save Scene").clicked() {
-                state.io_request = Some(IoRequest::Save);
                 ui.close_menu();
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Kaadan scene (RON)", &["ron"])
+                    .set_file_name("scene.ron")
+                    .save_file()
+                {
+                    state.io_request = Some(IoRequest::Save(path));
+                }
             }
             if ui.button("Open Scene").clicked() {
-                state.io_request = Some(IoRequest::Load);
                 ui.close_menu();
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("Kaadan scene (RON)", &["ron"])
+                    .pick_file()
+                {
+                    state.io_request = Some(IoRequest::Load(path));
+                }
             }
             ui.separator();
             if ui.button("Quit").clicked() {

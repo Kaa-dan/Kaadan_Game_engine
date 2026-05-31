@@ -131,30 +131,28 @@ impl Gfx {
 
         let raw_input = self.egui_state.take_egui_input(&self.window);
         let viewport_tex = self.viewport_tex;
-        let world = &mut self.viewport.world;
-        let cam2d = &self.viewport.camera2d;
-        let cam3d = &self.viewport.camera3d;
+        let viewport = &mut self.viewport;
         let full_output = self.egui_ctx.run(raw_input, |ctx| {
-            crate::ui::build(ctx, state, world, cam2d, cam3d, viewport_tex)
+            crate::ui::build(ctx, state, viewport, viewport_tex)
         });
         self.egui_state
             .handle_platform_output(&self.window, full_output.platform_output);
 
         // Save/load needs the GPU device (to rebuild assets), so it runs here
-        // rather than inside the egui closure.
+        // rather than inside the egui closure. The toolbar resolves the file
+        // path through `rfd` before queuing the request.
         if let Some(request) = state.io_request.take() {
-            let path = "kaadan_scene.ron";
             match request {
-                crate::scene_io::IoRequest::Save => {
-                    if let Err(e) = self.viewport.save_scene(path) {
+                crate::scene_io::IoRequest::Save(path) => {
+                    if let Err(e) = self.viewport.save_scene(&path) {
                         tracing::error!("save failed: {e}");
                     }
                 }
-                crate::scene_io::IoRequest::Load => {
+                crate::scene_io::IoRequest::Load(path) => {
                     match self.viewport.load_scene(
                         &self.renderer.device,
                         &self.renderer.queue,
-                        path,
+                        &path,
                     ) {
                         Ok(()) => state.selected = None,
                         Err(e) => tracing::error!("load failed: {e}"),

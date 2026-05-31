@@ -16,10 +16,15 @@ kaadan_math.workspace = true
 kaadan_renderer.workspace = true
 kaadan_ecs.workspace = true
 kaadan_scene.workspace = true
+kaadan_script.workspace = true
 
 egui.workspace = true
 egui-wgpu.workspace = true
 egui-winit.workspace = true
+# Docking layout for egui (0.15 targets egui 0.30, matching our workspace pin).
+egui_dock = "0.15"
+# Native file dialogs (Save/Open scene).
+rfd = "0.15"
 
 wgpu.workspace = true
 winit.workspace = true

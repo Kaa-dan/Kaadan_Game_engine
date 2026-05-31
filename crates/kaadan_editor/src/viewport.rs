@@ -4,6 +4,7 @@
 //! maps GPU handles to serializable [`TextureSource`]/[`MeshSource`] descriptors.
 
 use std::collections::HashMap;
+use std::path::Path;
 
 use kaadan_ecs::{Entity, World};
 use kaadan_math::{Color, Handle, HandleAllocator, Transform, Vec2, Vec3};
@@ -208,11 +209,11 @@ impl Viewport {
 
     // --- Scene save / load ------------------------------------------------
 
-    pub fn save_scene(&self, path: &str) -> Result<(), String> {
+    pub fn save_scene(&self, path: &Path) -> Result<(), String> {
         let scene = self.to_scene();
         let ron = scene.to_ron()?;
         std::fs::write(path, ron).map_err(|e| e.to_string())?;
-        tracing::info!("saved scene to {path}");
+        tracing::info!("saved scene to {}", path.display());
         Ok(())
     }
 
@@ -220,14 +221,30 @@ impl Viewport {
         &mut self,
         device: &wgpu::Device,
         queue: &wgpu::Queue,
-        path: &str,
+        path: &Path,
     ) -> Result<(), String> {
         let ron = std::fs::read_to_string(path).map_err(|e| e.to_string())?;
         let scene = EditorScene::from_ron(&ron)?;
         let roots = scene.entities.len();
         self.apply_scene(device, queue, &scene);
-        tracing::info!("loaded scene from {path} ({roots} roots)");
+        tracing::info!("loaded scene from {} ({roots} roots)", path.display());
         Ok(())
+    }
+
+    // --- Asset listing (used by the Assets panel) -------------------------
+
+    /// String keys of all loaded texture assets, sorted for stable display.
+    pub fn texture_keys(&self) -> Vec<&str> {
+        let mut keys: Vec<&str> = self.texture_keys.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        keys
+    }
+
+    /// String keys of all loaded mesh assets, sorted for stable display.
+    pub fn mesh_keys(&self) -> Vec<&str> {
+        let mut keys: Vec<&str> = self.mesh_keys.keys().map(String::as_str).collect();
+        keys.sort_unstable();
+        keys
     }
 
     /// Replace the current world contents with `scene` (used by load and by

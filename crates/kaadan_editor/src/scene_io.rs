@@ -3,17 +3,20 @@
 //! cube) round-trip without needing files on disk. `File`/`Gltf` variants are the
 //! Unity-style asset references for when a real import pipeline lands.
 
+use std::path::PathBuf;
+
 use serde::{Deserialize, Serialize};
 
 use kaadan_math::{Color, Quat, Transform, Vec2, Vec3};
 use kaadan_renderer::{DirectionalLight, PointLight, Sprite};
 
 /// What an editor I/O menu action wants to do (resolved by the app loop, which
-/// owns the GPU device needed to rebuild assets).
-#[derive(Clone, Copy)]
+/// owns the GPU device needed to rebuild assets). Each variant carries the
+/// resolved file path picked from a native file dialog.
+#[derive(Clone)]
 pub enum IoRequest {
-    Save,
-    Load,
+    Save(PathBuf),
+    Load(PathBuf),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
