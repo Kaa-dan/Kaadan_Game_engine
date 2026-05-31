@@ -3,7 +3,10 @@
 mod app;
 mod commands;
 mod components;
+mod gizmo;
 mod panels;
+mod play;
+mod scene_io;
 mod state;
 mod ui;
 mod viewport;

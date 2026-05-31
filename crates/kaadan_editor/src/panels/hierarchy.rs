@@ -1,10 +1,18 @@
-//! Hierarchy panel: a tree of all entities in the scene world.
+//! Hierarchy panel: a tree of all entities, plus create/delete/duplicate actions.
 
 use kaadan_ecs::{Entity, World};
 use kaadan_renderer::{DirectionalLight, Mesh3D, PointLight, Sprite};
 use kaadan_scene::{Children, Parent};
 
+use crate::commands::Command;
 use crate::components::Name;
+use crate::state::EditorState;
+
+enum Action {
+    Create,
+    Duplicate,
+    Delete,
+}
 
 struct Row {
     entity: Entity,
@@ -12,31 +20,74 @@ struct Row {
     depth: usize,
 }
 
-pub fn show(ui: &mut egui::Ui, world: &World, selected: &mut Option<Entity>) {
-    ui.heading("Hierarchy");
+pub fn show(ui: &mut egui::Ui, world: &mut World, state: &mut EditorState) {
+    let mut action = None;
+    ui.horizontal(|ui| {
+        ui.heading("Hierarchy");
+        if ui.small_button("➕").on_hover_text("New entity").clicked() {
+            action = Some(Action::Create);
+        }
+        let has_sel = state.selected.is_some();
+        if ui
+            .add_enabled(has_sel, egui::Button::new("⧉").small())
+            .on_hover_text("Duplicate")
+            .clicked()
+        {
+            action = Some(Action::Duplicate);
+        }
+        if ui
+            .add_enabled(has_sel, egui::Button::new("🗑").small())
+            .on_hover_text("Delete")
+            .clicked()
+        {
+            action = Some(Action::Delete);
+        }
+    });
     ui.separator();
 
     let rows = collect(world);
-    if rows.is_empty() {
-        ui.label("(empty scene)");
-        return;
-    }
-
+    let mut clicked = None;
     egui::ScrollArea::vertical().show(ui, |ui| {
-        for row in rows {
+        if rows.is_empty() {
+            ui.label("(empty scene)");
+        }
+        for row in &rows {
             ui.horizontal(|ui| {
                 ui.add_space(row.depth as f32 * 14.0);
-                let is_selected = *selected == Some(row.entity);
-                if ui.selectable_label(is_selected, row.label).clicked() {
-                    *selected = Some(row.entity);
+                let is_selected = state.selected == Some(row.entity);
+                if ui.selectable_label(is_selected, &row.label).clicked() {
+                    clicked = Some(row.entity);
                 }
             });
         }
     });
+    if let Some(e) = clicked {
+        state.selected = Some(e);
+    }
+
+    match action {
+        Some(Action::Create) => {
+            state
+                .commands
+                .run(world, &mut state.selected, Command::create_entity());
+        }
+        Some(Action::Duplicate) => {
+            if let Some(src) = state.selected {
+                let cmd = Command::duplicate(world, src);
+                state.commands.run(world, &mut state.selected, cmd);
+            }
+        }
+        Some(Action::Delete) => {
+            if let Some(target) = state.selected {
+                let cmd = Command::delete(world, target);
+                state.commands.run(world, &mut state.selected, cmd);
+            }
+        }
+        None => {}
+    }
 }
 
-/// Walk roots (entities without a `Parent`) depth-first through `Children`,
-/// producing a flat list annotated with indentation depth.
+/// Walk roots (entities without a `Parent`) depth-first through `Children`.
 fn collect(world: &World) -> Vec<Row> {
     let mut roots: Vec<Entity> = world
         .inner()

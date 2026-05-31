@@ -2,6 +2,7 @@
 //! owns the raw `Window` and `WindowEvent`s so egui-winit can consume them.
 
 use std::sync::Arc;
+use std::time::Instant;
 
 use egui_wgpu::ScreenDescriptor;
 use kaadan_renderer::Renderer;
@@ -24,6 +25,8 @@ struct Gfx {
     viewport: Viewport,
     /// egui handle to the viewport's offscreen color texture.
     viewport_tex: Option<egui::TextureId>,
+    /// Timestamp of the previous frame, for play-mode delta time.
+    last_frame: Instant,
 }
 
 #[derive(Default)]
@@ -73,6 +76,7 @@ impl ApplicationHandler for EditorApp {
             egui_renderer,
             viewport,
             viewport_tex: None,
+            last_frame: Instant::now(),
         });
         tracing::info!("editor initialized at {}x{}", size.width, size.height);
     }
@@ -118,14 +122,68 @@ impl ApplicationHandler for EditorApp {
 
 impl Gfx {
     fn render(&mut self, state: &mut EditorState) {
+        let now = Instant::now();
+        let dt = (now - self.last_frame).as_secs_f32().min(0.1);
+        self.last_frame = now;
+        if state.playing {
+            crate::play::tick(&mut self.viewport.world, dt);
+        }
+
         let raw_input = self.egui_state.take_egui_input(&self.window);
         let viewport_tex = self.viewport_tex;
-        let world = &self.viewport.world;
+        let world = &mut self.viewport.world;
+        let cam2d = &self.viewport.camera2d;
+        let cam3d = &self.viewport.camera3d;
         let full_output = self.egui_ctx.run(raw_input, |ctx| {
-            crate::ui::build(ctx, state, world, viewport_tex)
+            crate::ui::build(ctx, state, world, cam2d, cam3d, viewport_tex)
         });
         self.egui_state
             .handle_platform_output(&self.window, full_output.platform_output);
+
+        // Save/load needs the GPU device (to rebuild assets), so it runs here
+        // rather than inside the egui closure.
+        if let Some(request) = state.io_request.take() {
+            let path = "kaadan_scene.ron";
+            match request {
+                crate::scene_io::IoRequest::Save => {
+                    if let Err(e) = self.viewport.save_scene(path) {
+                        tracing::error!("save failed: {e}");
+                    }
+                }
+                crate::scene_io::IoRequest::Load => {
+                    match self.viewport.load_scene(
+                        &self.renderer.device,
+                        &self.renderer.queue,
+                        path,
+                    ) {
+                        Ok(()) => state.selected = None,
+                        Err(e) => tracing::error!("load failed: {e}"),
+                    }
+                }
+            }
+        }
+
+        // Play/Stop: snapshot on start, restore on stop.
+        if let Some(request) = state.play_request.take() {
+            match request {
+                crate::play::PlayRequest::Start => {
+                    state.play_snapshot = Some(self.viewport.to_scene());
+                    state.playing = true;
+                }
+                crate::play::PlayRequest::Stop => {
+                    if let Some(scene) = state.play_snapshot.take() {
+                        self.viewport.apply_scene(
+                            &self.renderer.device,
+                            &self.renderer.queue,
+                            &scene,
+                        );
+                    }
+                    state.playing = false;
+                    state.selected = None;
+                    state.gizmo_drag = None;
+                }
+            }
+        }
 
         let ppp = full_output.pixels_per_point;
 

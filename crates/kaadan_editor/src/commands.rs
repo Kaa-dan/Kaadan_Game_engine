@@ -83,20 +83,20 @@ pub struct DeleteData {
 }
 
 pub enum Command {
-    Spawn(SpawnData),
+    Spawn(Box<SpawnData>),
     Delete(DeleteData),
 }
 
 impl Command {
     pub fn create_entity() -> Self {
-        Command::Spawn(SpawnData {
+        Command::Spawn(Box::new(SpawnData {
             template: EntitySnapshot {
                 name: Some(Name::new("Entity")),
                 transform: Some(Transform::IDENTITY),
                 ..Default::default()
             },
             live: None,
-        })
+        }))
     }
 
     pub fn duplicate(world: &World, source: Entity) -> Self {
@@ -104,10 +104,10 @@ impl Command {
         if let Some(name) = &template.name {
             template.name = Some(Name(format!("{} copy", name.0)));
         }
-        Command::Spawn(SpawnData {
+        Command::Spawn(Box::new(SpawnData {
             template,
             live: None,
-        })
+        }))
     }
 
     pub fn delete(world: &World, root: Entity) -> Self {
@@ -238,5 +238,77 @@ impl UndoStack {
 
     pub fn can_redo(&self) -> bool {
         !self.redo.is_empty()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn spawn_named(world: &mut World, name: &str) -> Entity {
+        let e = world.spawn(());
+        let _ = world.inner_mut().insert_one(e, Name::new(name));
+        let _ = world
+            .inner_mut()
+            .insert_one(e, Transform::from_position(kaadan_math::Vec3::X));
+        e
+    }
+
+    #[test]
+    fn create_undo_redo_roundtrips() {
+        let mut world = World::new();
+        let mut sel = None;
+        let mut stack = UndoStack::default();
+
+        stack.run(&mut world, &mut sel, Command::create_entity());
+        assert_eq!(world.len(), 1);
+        let created = sel.expect("selection set on create");
+        assert!(world.get::<Name>(created).is_ok());
+
+        stack.undo(&mut world, &mut sel);
+        assert_eq!(world.len(), 0);
+        assert_eq!(sel, None);
+
+        stack.redo(&mut world, &mut sel);
+        assert_eq!(world.len(), 1);
+        assert!(sel.is_some());
+    }
+
+    #[test]
+    fn delete_undo_restores_components() {
+        let mut world = World::new();
+        let entity = spawn_named(&mut world, "Victim");
+        let mut sel = Some(entity);
+        let mut stack = UndoStack::default();
+
+        let cmd = Command::delete(&world, entity);
+        stack.run(&mut world, &mut sel, cmd);
+        assert_eq!(world.len(), 0);
+        assert_eq!(sel, None);
+
+        stack.undo(&mut world, &mut sel);
+        assert_eq!(world.len(), 1);
+        let restored = sel.expect("selection set on restore");
+        assert_eq!(world.get::<Name>(restored).unwrap().0, "Victim");
+        assert!(world.get::<Transform>(restored).is_ok());
+    }
+
+    #[test]
+    fn duplicate_adds_then_undo_removes() {
+        let mut world = World::new();
+        let src = spawn_named(&mut world, "Original");
+        let mut sel = Some(src);
+        let mut stack = UndoStack::default();
+
+        let cmd = Command::duplicate(&world, src);
+        stack.run(&mut world, &mut sel, cmd);
+        assert_eq!(world.len(), 2);
+        let clone = sel.expect("selection set on duplicate");
+        assert_ne!(clone, src);
+        assert_eq!(world.get::<Name>(clone).unwrap().0, "Original copy");
+
+        stack.undo(&mut world, &mut sel);
+        assert_eq!(world.len(), 1);
+        assert!(world.is_alive(src));
     }
 }

@@ -27,6 +27,8 @@ raw-window-handle.workspace = true
 pollster.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
+serde.workspace = true
+ron.workspace = true
 
 [lints]
 workspace = true
