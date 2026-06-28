@@ -17,6 +17,14 @@ pub fn build(
     viewport: &mut Viewport,
     viewport_tex: Option<egui::TextureId>,
 ) {
+    // Drain any pending events from the cargo-build worker before rendering
+    // panels — keeps the Build tab live without blocking the UI thread. A
+    // repaint is requested if the worker is still active so we keep polling.
+    let drained = state.build_output.poll();
+    if drained > 0 || state.build_output.is_running() {
+        ctx.request_repaint();
+    }
+
     egui::TopBottomPanel::top("toolbar").show(ctx, |ui| {
         panels::toolbar::show(ui, state, &mut viewport.world)
     });
@@ -76,6 +84,12 @@ impl<'a> egui_dock::TabViewer for EditorTabViewer<'a> {
             }
             Tab::Assets => {
                 panels::assets::show(ui, self.viewport);
+            }
+            Tab::Code => {
+                panels::code::show(ui, &mut self.state.code_panel, &mut self.state.build_output);
+            }
+            Tab::Build => {
+                panels::build::show(ui, &mut self.state.build_output, &mut self.state.code_panel);
             }
         }
     }

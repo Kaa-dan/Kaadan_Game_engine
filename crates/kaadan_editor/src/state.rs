@@ -6,9 +6,11 @@ use kaadan_renderer::{DirectionalLight, Mesh3D, PbrMaterial, PointLight, Sprite}
 use kaadan_scene::{Children, GlobalTransform, Parent};
 use kaadan_script::ComponentRegistry;
 
+use crate::cargo_build::BuildOutput;
 use crate::commands::UndoStack;
 use crate::components::Name;
 use crate::gizmo::{DragTarget, GizmoMode};
+use crate::panels::code::CodePanelState;
 use crate::play::PlayRequest;
 use crate::scene_io::{EditorScene, IoRequest};
 
@@ -19,6 +21,8 @@ pub enum Tab {
     Inspector,
     Viewport,
     Assets,
+    Code,
+    Build,
 }
 
 impl Tab {
@@ -28,6 +32,8 @@ impl Tab {
             Tab::Inspector => "Inspector",
             Tab::Viewport => "Viewport",
             Tab::Assets => "Assets",
+            Tab::Code => "Code",
+            Tab::Build => "Build",
         }
     }
 }
@@ -54,11 +60,15 @@ pub struct EditorState {
     pub play_request: Option<PlayRequest>,
     /// Scene captured when Play started, restored on Stop.
     pub play_snapshot: Option<EditorScene>,
-    /// Dock layout for the editor's four primary panels.
+    /// Dock layout for the editor's primary panels.
     pub dock: DockState<Tab>,
     /// Registry of editor-visible component types, used by the inspector for
     /// the Add/Remove Component UI.
     pub registry: ComponentRegistry,
+    /// State for the Code panel (open file, buffer, file-tree state).
+    pub code_panel: CodePanelState,
+    /// Output (status + diagnostics) from the most recent / running cargo build.
+    pub build_output: BuildOutput,
 }
 
 impl Default for EditorState {
@@ -82,18 +92,21 @@ impl EditorState {
             play_snapshot: None,
             dock: default_dock_layout(),
             registry: default_registry(),
+            code_panel: CodePanelState::default(),
+            build_output: BuildOutput::default(),
         }
     }
 }
 
-/// Build the initial dock layout: Hierarchy on the left, Viewport in the
-/// center, Inspector on the right, Assets docked below the Viewport.
+/// Build the initial dock layout: Hierarchy on the left, Viewport (with a Code
+/// sibling tab) in the center, Inspector on the right, Assets and Build docked
+/// below the center.
 pub fn default_dock_layout() -> DockState<Tab> {
-    let mut dock = DockState::new(vec![Tab::Viewport]);
+    let mut dock = DockState::new(vec![Tab::Viewport, Tab::Code]);
     let main = dock.main_surface_mut();
     let [center, _left] = main.split_left(NodeIndex::root(), 0.20, vec![Tab::Hierarchy]);
     let [center, _right] = main.split_right(center, 0.75, vec![Tab::Inspector]);
-    main.split_below(center, 0.72, vec![Tab::Assets]);
+    main.split_below(center, 0.72, vec![Tab::Assets, Tab::Build]);
     dock
 }
 
@@ -156,5 +169,7 @@ mod tests {
         assert!(tabs.contains(&Tab::Inspector));
         assert!(tabs.contains(&Tab::Viewport));
         assert!(tabs.contains(&Tab::Assets));
+        assert!(tabs.contains(&Tab::Code));
+        assert!(tabs.contains(&Tab::Build));
     }
 }
