@@ -16,7 +16,9 @@ kaadan_math.workspace = true
 kaadan_renderer.workspace = true
 kaadan_ecs.workspace = true
 kaadan_scene.workspace = true
-kaadan_script.workspace = true
+# `hot_reload` pulls in the `ScriptHost` used by editor Play mode to load and
+# hot-reload the gameplay dylib.
+kaadan_script = { workspace = true, features = ["hot_reload"] }
 
 egui.workspace = true
 egui-wgpu.workspace = true

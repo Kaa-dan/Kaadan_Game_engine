@@ -15,6 +15,7 @@ members = [
     "crates/kaadan_app",
     "crates/kaadan_editor",
     "crates/kaadan_script",
+    "crates/kaadan_android",
     "templates/game_template",
 ]
 
@@ -93,7 +94,13 @@ kaadan_assets = { path = "crates/kaadan_assets" }
 kaadan_scene = { path = "crates/kaadan_scene" }
 kaadan_ui = { path = "crates/kaadan_ui" }
 kaadan_physics = { path = "crates/kaadan_physics" }
-kaadan_script = { path = "crates/kaadan_script" }
+# default-features off so mobile/static consumers can drop `libloading`;
+# consumers that need the hot-reload host (editor, desktop app) opt into it.
+kaadan_script = { path = "crates/kaadan_script", default-features = false }
+# default-features off so the mobile entry crate drops hot_reload/libloading;
+# consumers that want the desktop hot-reload host opt into the `hot_reload` feature.
+kaadan_app = { path = "crates/kaadan_app", default-features = false }
+game_template = { path = "templates/game_template" }
 
 [workspace.lints.clippy]
 # Correctness

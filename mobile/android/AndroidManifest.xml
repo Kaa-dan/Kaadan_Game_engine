@@ -1,7 +1,8 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- KaadanEngine Android manifest (scaffold). Uses NativeActivity so the engine
-     runs entirely from native code. `android.app.lib_name` must match the
-     cdylib produced by the app crate (android_main entry point). -->
+<!-- KaadanEngine Android manifest. Uses NativeActivity so the engine runs
+     entirely from native code. `android.app.lib_name` must match the cdylib
+     produced by the entry crate `kaadan_android` (→ libkaadan_android.so),
+     whose `android_main` is the entry point. -->
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     package="dev.kaadan.engine">
 
@@ -21,7 +22,7 @@
 
             <meta-data
                 android:name="android.app.lib_name"
-                android:value="kaadan_app" />
+                android:value="kaadan_android" />
 
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

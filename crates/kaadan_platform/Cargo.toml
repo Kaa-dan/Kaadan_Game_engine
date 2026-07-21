@@ -15,3 +15,8 @@ kaadan_core.workspace = true
 tracing.workspace = true
 raw-window-handle.workspace = true
 winit.workspace = true
+
+# Android: enable winit's native-activity backend, which pulls in the
+# `android-activity` glue and re-exports `AndroidApp`.
+[target.'cfg(target_os = "android")'.dependencies]
+winit = { workspace = true, features = ["android-native-activity"] }

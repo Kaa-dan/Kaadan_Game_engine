@@ -17,9 +17,14 @@
 //! by the [`kaadan_game!`] macro. See `docs/scripting/abi.md` for the full ABI
 //! and safety contract.
 
+mod behaviour;
 mod context;
 mod registry;
 
+pub use behaviour::{
+    behaviour_driver_system, clear_all_behaviours, Behaviour, BehaviourContext, BehaviourFactory,
+    BehaviourRegistry, ScriptComponent, BEHAVIOUR_DRIVER_SYSTEM,
+};
 pub use context::ScriptContext;
 pub use registry::ComponentRegistry;
 

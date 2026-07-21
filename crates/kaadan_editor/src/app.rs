@@ -2,7 +2,6 @@
 //! owns the raw `Window` and `WindowEvent`s so egui-winit can consume them.
 
 use std::sync::Arc;
-use std::time::Instant;
 
 use egui_wgpu::ScreenDescriptor;
 use kaadan_renderer::Renderer;
@@ -25,8 +24,6 @@ struct Gfx {
     viewport: Viewport,
     /// egui handle to the viewport's offscreen color texture.
     viewport_tex: Option<egui::TextureId>,
-    /// Timestamp of the previous frame, for play-mode delta time.
-    last_frame: Instant,
 }
 
 #[derive(Default)]
@@ -76,7 +73,6 @@ impl ApplicationHandler for EditorApp {
             egui_renderer,
             viewport,
             viewport_tex: None,
-            last_frame: Instant::now(),
         });
         tracing::info!("editor initialized at {}x{}", size.width, size.height);
     }
@@ -122,11 +118,12 @@ impl ApplicationHandler for EditorApp {
 
 impl Gfx {
     fn render(&mut self, state: &mut EditorState) {
-        let now = Instant::now();
-        let dt = (now - self.last_frame).as_secs_f32().min(0.1);
-        self.last_frame = now;
+        // Advance the running gameplay session (behaviour start/update + any
+        // hot-reload) before building the UI, so panels show the live state.
         if state.playing {
-            crate::play::tick(&mut self.viewport.world, dt);
+            if let Some(session) = state.play_session.as_mut() {
+                session.tick(&mut self.viewport.world);
+            }
         }
 
         let raw_input = self.egui_state.take_egui_input(&self.window);
@@ -165,10 +162,21 @@ impl Gfx {
         if let Some(request) = state.play_request.take() {
             match request {
                 crate::play::PlayRequest::Start => {
+                    // Snapshot for Stop-restore, then spin up the runtime against
+                    // the live world (attaches behaviours to existing entities).
                     state.play_snapshot = Some(self.viewport.to_scene());
+                    let crate_dir = state.code_panel.crate_dir.clone();
+                    state.play_session = Some(crate::play::PlaySession::start(
+                        &mut self.viewport.world,
+                        &crate_dir,
+                    ));
                     state.playing = true;
                 }
                 crate::play::PlayRequest::Stop => {
+                    // Drop the runtime (unloads the dylib) before restoring the
+                    // snapshot, which despawns the play world including any
+                    // attached behaviour components.
+                    state.play_session = None;
                     if let Some(scene) = state.play_snapshot.take() {
                         self.viewport.apply_scene(
                             &self.renderer.device,

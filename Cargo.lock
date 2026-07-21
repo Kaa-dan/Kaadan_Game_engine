@@ -1786,6 +1786,21 @@ dependencies = [
 ]
 
 [[package]]
+name = "kaadan_android"
+version = "0.1.0"
+dependencies = [
+ "game_template",
+ "kaadan_app",
+ "kaadan_math",
+ "kaadan_platform",
+ "kaadan_renderer",
+ "kaadan_script",
+ "kaadan_ui",
+ "tracing",
+ "tracing-subscriber",
+]
+
+[[package]]
 name = "kaadan_app"
 version = "0.1.0"
 dependencies = [
@@ -1799,6 +1814,7 @@ dependencies = [
  "kaadan_platform",
  "kaadan_renderer",
  "kaadan_scene",
+ "kaadan_script",
  "kaadan_ui",
  "puffin",
  "tracing",

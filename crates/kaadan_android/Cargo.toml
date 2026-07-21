@@ -1,0 +1,31 @@
+[package]
+name = "kaadan_android"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+rust-version.workspace = true
+description = "Android entry point (android_main) that runs a KaadanEngine game as an APK"
+
+[lints]
+workspace = true
+
+# cdylib: the .so loaded by the Android NativeActivity (its lib_name).
+# lib: lets the crate participate in the desktop `cargo build --workspace` so
+# breakage is caught in CI even though `android_main` is Android-only.
+[lib]
+crate-type = ["lib", "cdylib"]
+
+[dependencies]
+# Static-link (shipping) path — no hot_reload/libloading on mobile.
+kaadan_app.workspace = true
+kaadan_platform.workspace = true
+kaadan_math.workspace = true
+kaadan_renderer.workspace = true
+kaadan_ui.workspace = true
+kaadan_script = { workspace = true, default-features = false }
+# The game itself, linked as an rlib and registered via `with_static_game`.
+game_template.workspace = true
+tracing.workspace = true
+
+[target.'cfg(target_os = "android")'.dependencies]
+tracing-subscriber.workspace = true

@@ -8,9 +8,24 @@ use kaadan_renderer::{
     Camera2D, Camera3D, Mesh3DGpu, PbrRenderer, Renderer, SpriteBatch, SpriteRenderer, Texture,
     UiQuad, UiRenderer,
 };
-use kaadan_ui::{UiNode, UiProgressBar};
+use kaadan_script::ScriptContext;
+#[cfg(feature = "hot_reload")]
+use kaadan_script::ScriptHost;
+use kaadan_ui::{UiNode, UiProgressBar, UiText};
 
 use crate::frame_pacer::{FramePacer, FrameStats};
+use crate::lifecycle::LifecycleManager;
+
+/// How gameplay code is supplied to the engine.
+enum GameSource {
+    /// Statically linked: `register` is called once at init (mobile / shipping,
+    /// and any build compiled with gameplay in-tree).
+    Static(fn(&mut ScriptContext)),
+    /// Hot-reloadable: a `ScriptHost` watches a built cdylib and reloads it when
+    /// it changes (desktop development).
+    #[cfg(feature = "hot_reload")]
+    Host(ScriptHost),
+}
 
 type InitCallback = Box<dyn FnOnce(&mut EngineSetup)>;
 
@@ -21,6 +36,8 @@ struct RenderCtx {
     sprite_batch: SpriteBatch,
     pbr: PbrRenderer,
     ui: UiRenderer,
+    /// Built-in bitmap-font glyph atlas, sampled when drawing `UiText`.
+    font_atlas: Texture,
     textures: HashMap<Handle<Texture>, Texture>,
     texture_alloc: HandleAllocator<Texture>,
     meshes: HashMap<Handle<Mesh3DGpu>, Mesh3DGpu>,
@@ -135,9 +152,13 @@ pub struct Engine {
     render: Option<RenderCtx>,
     pacer: FramePacer,
     stats: FrameStats,
+    lifecycle: LifecycleManager,
     should_exit: bool,
     clear_color: Color,
     on_init: Option<InitCallback>,
+    /// Optional gameplay plugin, loaded after `on_init` so its registration sees
+    /// any entities the init callback spawned.
+    game: Option<GameSource>,
 }
 
 impl Engine {
@@ -163,10 +184,32 @@ impl Engine {
             render: None,
             pacer: FramePacer::new(target_fps),
             stats: FrameStats::new(),
+            lifecycle: LifecycleManager::new(),
             should_exit: false,
             clear_color: Color::new(0.05, 0.05, 0.08, 1.0),
             on_init: None,
+            game: None,
         }
+    }
+
+    /// Run gameplay from a hot-reloadable cdylib at `path` (desktop dev).
+    ///
+    /// The plugin is loaded once the renderer is up and the [`on_init`](Self::on_init)
+    /// callback has run, then watched: rebuild the game crate and the engine
+    /// swaps in the new code each frame via [`ScriptHost::poll`], preserving the
+    /// world and resources across the reload.
+    #[cfg(feature = "hot_reload")]
+    pub fn with_script_host(mut self, path: impl Into<std::path::PathBuf>) -> Self {
+        self.game = Some(GameSource::Host(ScriptHost::new(path)));
+        self
+    }
+
+    /// Run statically-linked gameplay: `register` (a game crate's `build`) is
+    /// called once at init. This is the mobile / shipping path — iOS forbids
+    /// loading user dylibs — and works on any platform.
+    pub fn with_static_game(mut self, register: fn(&mut ScriptContext)) -> Self {
+        self.game = Some(GameSource::Static(register));
+        self
     }
 
     /// Run a one-time setup callback after the renderer is initialized.
@@ -252,6 +295,17 @@ impl AppHandler for Engine {
             renderer.surface_format(),
             kaadan_renderer::UI_SHADER,
         );
+        // The built-in bitmap font: expand the embedded glyph art into a
+        // white-on-transparent atlas and upload it once. `UiText` glyph quads
+        // sample this and are tinted by the UI shader (texture × vertex color).
+        let font_atlas = Texture::from_rgba8(
+            &renderer.device,
+            &renderer.queue,
+            &kaadan_ui::build_atlas_rgba(),
+            kaadan_ui::ATLAS_W,
+            kaadan_ui::ATLAS_H,
+            "font_atlas",
+        );
 
         self.app
             .resources
@@ -269,6 +323,7 @@ impl AppHandler for Engine {
             sprite_batch: SpriteBatch::new(),
             pbr,
             ui,
+            font_atlas,
             textures: HashMap::new(),
             texture_alloc: HandleAllocator::new(),
             meshes: HashMap::new(),
@@ -282,6 +337,22 @@ impl AppHandler for Engine {
                 ctx: &mut ctx,
             };
             callback(&mut setup);
+        }
+
+        // Load gameplay after `on_init`, so plugin registration (which may attach
+        // behaviours to entities) sees whatever the init callback spawned.
+        match self.game.as_mut() {
+            Some(GameSource::Static(register)) => {
+                let mut sctx = ScriptContext::new(&mut self.app);
+                register(&mut sctx);
+            }
+            #[cfg(feature = "hot_reload")]
+            Some(GameSource::Host(host)) => {
+                if let Err(e) = host.load(&mut self.app) {
+                    tracing::error!("failed to load gameplay plugin: {e}");
+                }
+            }
+            None => {}
         }
 
         self.render = Some(ctx);
@@ -304,10 +375,19 @@ impl AppHandler for Engine {
             }
         }
 
+        // Hot-reload the gameplay plugin if its cdylib changed on disk. State in
+        // the world/resources survives; behaviour instances are re-created.
+        #[cfg(feature = "hot_reload")]
+        if let Some(GameSource::Host(host)) = self.game.as_mut() {
+            host.poll(&mut self.app);
+        }
+
         self.app.tick();
 
         let clear = self.clear_color;
-        if let Some(ctx) = self.render.as_mut() {
+        // Skip rendering while suspended (mobile background): the surface is
+        // gone until `surface_created` rebuilds it.
+        if let Some(ctx) = self.render.as_mut().filter(|c| c.renderer.has_surface()) {
             let cam2d = self.app.resources.get::<Camera2D>();
             let cam3d = self.app.resources.get::<Camera3D>();
             if let (Some(cam2d), Some(cam3d)) = (cam2d, cam3d) {
@@ -347,6 +427,35 @@ impl AppHandler for Engine {
 
     fn lifecycle(&mut self, event: LifecycleEvent) {
         tracing::debug!("lifecycle event: {event:?}");
+        match event {
+            LifecycleEvent::Resumed => self.lifecycle.on_resume(),
+            LifecycleEvent::Suspended => self.lifecycle.on_suspend(),
+            LifecycleEvent::LowMemory => self.lifecycle.on_low_memory(),
+        }
+    }
+
+    fn surface_created(&mut self, window: &dyn PlatformWindow) {
+        // Called on mobile resume after the first init. Rebuild the surface
+        // against the freshly provided window so rendering can continue.
+        if let Some(ctx) = self.render.as_mut() {
+            if let Err(e) = ctx.renderer.resume(window) {
+                tracing::error!("failed to recreate surface on resume: {e}");
+                self.should_exit = true;
+                return;
+            }
+            // The new window may report a different size; sync the surface.
+            let (w, h) = (window.width().max(1), window.height().max(1));
+            ctx.renderer.resize(w, h);
+            tracing::info!("surface recreated at {w}x{h}");
+        }
+    }
+
+    fn surface_destroyed(&mut self) {
+        // Called on mobile suspend. Drop the surface; device/resources persist.
+        if let Some(ctx) = self.render.as_mut() {
+            ctx.renderer.suspend();
+            tracing::info!("surface destroyed (suspended)");
+        }
     }
 
     fn should_exit(&self) -> bool {
@@ -408,6 +517,28 @@ fn collect_ui_quads(world: &World) -> Vec<UiQuad> {
         });
     }
 
+    quads
+}
+
+/// Build glyph quads for every `UiText` that is paired with a `UiNode`, anchored
+/// at the node's computed top-left. Quads sample the font atlas and are tinted by
+/// the text color. Returned separately from [`collect_ui_quads`] because they
+/// bind a different texture (a second UI draw call).
+fn collect_text_quads(world: &World) -> Vec<UiQuad> {
+    let mut quads = Vec::new();
+    for (_e, (node, text)) in world.query::<(&UiNode, &UiText)>().iter() {
+        if !node.visible || text.text.is_empty() || text.color.a <= 0.0 {
+            continue;
+        }
+        let origin = node.computed_rect.min;
+        for g in kaadan_ui::layout_text(&text.text, origin, text.font_size, text.color) {
+            quads.push(UiQuad {
+                rect: g.rect,
+                uv: g.uv,
+                color: g.color,
+            });
+        }
+    }
     quads
 }
 
@@ -502,6 +633,17 @@ fn render_frame(
                     screen,
                     &ui_quads,
                     None,
+                    &mut pass,
+                );
+
+                // Text glyphs on top, sampling the bitmap-font atlas.
+                let text_quads = collect_text_quads(world);
+                ctx.ui.render(
+                    &ctx.renderer.device,
+                    &ctx.renderer.queue,
+                    screen,
+                    &text_quads,
+                    Some(&ctx.font_atlas),
                     &mut pass,
                 );
             }

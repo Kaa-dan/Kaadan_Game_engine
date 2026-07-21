@@ -1,6 +1,7 @@
-// Minimal Gradle scaffold for packaging KaadanEngine's Rust .so files into an APK.
-// Wire `jniLibs.srcDirs` to the cargo-ndk output (see scripts/build_android.sh)
-// and add a signingConfig for release builds.
+// Gradle project that packages KaadanEngine's Rust .so files into an APK.
+// `scripts/build_android.sh` builds the cdylib with cargo-ndk and drops the
+// per-ABI .so under `mobile/android/jniLibs/<abi>/`, which `jniLibs.srcDirs`
+// below picks up. Add a signingConfig for release/store builds.
 plugins {
     id("com.android.application")
 }
@@ -16,7 +17,9 @@ android {
         versionCode = 1
         versionName = "0.1.0"
         ndk {
-            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+            // arm64-v8a covers essentially all real devices; add "armeabi-v7a"
+            // and "x86_64" (emulator) once the arm64 bring-up is verified.
+            abiFilters += listOf("arm64-v8a")
         }
     }
 
@@ -27,6 +30,6 @@ android {
         }
     }
 
-    // sourceSets["main"].jniLibs.srcDirs("../../target/jniLibs")
+    sourceSets["main"].jniLibs.srcDirs("jniLibs")
     sourceSets["main"].manifest.srcFile("AndroidManifest.xml")
 }

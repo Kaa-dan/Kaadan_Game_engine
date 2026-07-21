@@ -4,6 +4,7 @@ use std::time::SystemTime;
 use kaadan_ecs::App;
 use libloading::{Library, Symbol};
 
+use crate::behaviour::{clear_all_behaviours, BehaviourRegistry};
 use crate::context::ScriptContext;
 
 /// The exported symbol every gameplay plugin must provide. See `kaadan_game!`.
@@ -132,6 +133,16 @@ impl ScriptHost {
             app.remove_system(name);
         }
         self.plugin_systems.clear();
+
+        // Behaviour instances carry vtables into the old library, and the
+        // BehaviourRegistry holds factory `fn` pointers into it — both dangle the
+        // moment `self.lib` drops. Tear them down (running `on_destroy`) and drop
+        // the registry's factories before the code is unmapped. The fresh plugin
+        // re-registers its factories and re-attaches behaviours from `build`.
+        clear_all_behaviours(&mut app.world, &mut app.resources);
+        if let Some(registry) = app.resources.get_mut::<BehaviourRegistry>() {
+            registry.clear();
+        }
 
         // Now it is sound to unload the old code.
         self.lib = None;

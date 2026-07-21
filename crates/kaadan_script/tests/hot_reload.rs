@@ -1,8 +1,8 @@
 //! End-to-end hot-reload test.
 //!
 //! This builds the `game_template` cdylib with `cargo`, loads it through a
-//! [`ScriptHost`], and verifies the plugin's `spin` system actually runs and
-//! rotates a `Mesh3D` + `Transform` entity.
+//! [`ScriptHost`], and verifies the plugin's `Spinner` behaviour actually runs
+//! and rotates the `Mesh3D` + `Transform` entity it is attached to.
 //!
 //! It is `#[ignore]`d because building a crate from inside a test is slow and
 //! fragile (it shells out to `cargo`, depends on the workspace layout, and
@@ -65,8 +65,18 @@ fn hot_reload_loads_and_runs_plugin() {
         dylib.display()
     );
 
-    // 3. Load it into a fresh App.
+    // 3. Spawn a Mesh3D + Transform entity BEFORE loading (no GPU needed: the
+    //    handle is a plain id, and the test never dereferences the mesh). The
+    //    plugin's `build` attaches a `Spinner` behaviour to existing meshes, so
+    //    the entity must exist at load time.
     let mut app = App::new();
+    let mut alloc: HandleAllocator<Mesh3DGpu> = HandleAllocator::new();
+    let e = app
+        .world
+        .spawn((Mesh3D::new(alloc.allocate()), Transform::IDENTITY));
+
+    // 4. Load the plugin: registers the behaviour driver system and attaches a
+    //    Spinner to the mesh entity.
     let mut host = ScriptHost::new(&dylib);
     host.load(&mut app).expect("ScriptHost::load failed");
     assert!(
@@ -74,15 +84,8 @@ fn hot_reload_loads_and_runs_plugin() {
         "plugin registered no systems"
     );
 
-    // 4. Spawn a Mesh3D + Transform entity (no GPU needed: the handle is a
-    //    plain id, and the test never dereferences the mesh).
-    let mut alloc: HandleAllocator<Mesh3DGpu> = HandleAllocator::new();
-    let e = app
-        .world
-        .spawn((Mesh3D::new(alloc.allocate()), Transform::IDENTITY));
-
-    // 5. Drive a frame with a known delta so `spin` produces a deterministic,
-    //    non-identity rotation.
+    // 5. Drive a frame with a known delta so the Spinner produces a
+    //    deterministic, non-identity rotation.
     app.resources
         .get_mut::<Time>()
         .unwrap()
@@ -90,5 +93,9 @@ fn hot_reload_loads_and_runs_plugin() {
     app.tick();
 
     let rot = app.world.get::<Transform>(e).unwrap().rotation;
-    assert_ne!(rot, Quat::IDENTITY, "spin did not rotate the entity");
+    assert_ne!(
+        rot,
+        Quat::IDENTITY,
+        "Spinner behaviour did not rotate the entity"
+    );
 }

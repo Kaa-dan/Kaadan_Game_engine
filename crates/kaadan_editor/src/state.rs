@@ -11,7 +11,7 @@ use crate::commands::UndoStack;
 use crate::components::Name;
 use crate::gizmo::{DragTarget, GizmoMode};
 use crate::panels::code::CodePanelState;
-use crate::play::PlayRequest;
+use crate::play::{PlayRequest, PlaySession};
 use crate::scene_io::{EditorScene, IoRequest};
 
 /// Identifier for a dockable editor panel.
@@ -60,6 +60,9 @@ pub struct EditorState {
     pub play_request: Option<PlayRequest>,
     /// Scene captured when Play started, restored on Stop.
     pub play_snapshot: Option<EditorScene>,
+    /// The live gameplay runtime while Play mode is active (owns the runtime
+    /// `App` + hot-reload `ScriptHost`). `None` when stopped.
+    pub play_session: Option<PlaySession>,
     /// Dock layout for the editor's primary panels.
     pub dock: DockState<Tab>,
     /// Registry of editor-visible component types, used by the inspector for
@@ -90,6 +93,7 @@ impl EditorState {
             playing: false,
             play_request: None,
             play_snapshot: None,
+            play_session: None,
             dock: default_dock_layout(),
             registry: default_registry(),
             code_panel: CodePanelState::default(),

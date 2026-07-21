@@ -137,7 +137,7 @@ impl BuildOutput {
 
         let package = package.to_string();
         thread::spawn(move || {
-            run_cargo_build(&package, &manifest_dir, tx);
+            run_cargo_build(&package, &manifest_dir, &tx);
         });
     }
 
@@ -200,7 +200,7 @@ impl BuildOutput {
 fn run_cargo_build(
     package: &str,
     manifest_dir: &std::path::Path,
-    tx: std::sync::mpsc::Sender<BuildEvent>,
+    tx: &std::sync::mpsc::Sender<BuildEvent>,
 ) {
     // Capture stderr too so non-JSON cargo errors (e.g. "could not find
     // package") aren't lost. We don't currently surface stderr to the UI, but
