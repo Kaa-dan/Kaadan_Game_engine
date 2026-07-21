@@ -22,6 +22,8 @@ pub struct UiButton {
     pub label: String,
     pub pressed: bool,
     pub hovered: bool,
+    /// True for the single frame the pointer is released over the button.
+    pub clicked: bool,
 }
 
 impl UiButton {
@@ -30,6 +32,7 @@ impl UiButton {
             label: label.into(),
             pressed: false,
             hovered: false,
+            clicked: false,
         }
     }
 }

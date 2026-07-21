@@ -11,8 +11,5 @@ workspace = true
 
 [dependencies]
 kaadan_math.workspace = true
-kaadan_core.workspace = true
 kaadan_ecs.workspace = true
 rapier2d.workspace = true
-parry2d.workspace = true
-tracing.workspace = true

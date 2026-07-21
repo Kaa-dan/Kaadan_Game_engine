@@ -2,10 +2,12 @@
 //!
 //! Provides scene loading, saving, and runtime scene tree operations.
 
+mod bridge;
 mod hierarchy;
 mod scene;
 
-pub use hierarchy::{transform_propagation_system, Children, GlobalTransform, Parent};
+pub use bridge::{Name, Tags};
+pub use hierarchy::{set_parent, transform_propagation_system, Children, GlobalTransform, Parent};
 pub use scene::{EntityDesc, Scene, TransformDesc};
 
 #[cfg(test)]

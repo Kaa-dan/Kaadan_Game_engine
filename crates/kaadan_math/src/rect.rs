@@ -2,6 +2,7 @@ use glam::Vec2;
 
 /// A 2D rectangle defined by minimum and maximum corners.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Rect {
     pub min: Vec2,
     pub max: Vec2,
@@ -67,6 +68,7 @@ impl Rect {
 
 /// 3D axis-aligned bounding box.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct AABB {
     pub min: glam::Vec3,
     pub max: glam::Vec3,

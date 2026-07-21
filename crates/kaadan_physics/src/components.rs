@@ -100,10 +100,17 @@ impl Default for Velocity {
     }
 }
 
-/// Collision event produced by the physics step.
-#[derive(Debug, Clone)]
+/// Whether a collision started or stopped this step.
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum CollisionEventType {
+    Started,
+    Stopped,
+}
+
+/// Collision event produced by the physics step, mapped back to ECS entities.
+#[derive(Debug, Clone, Copy)]
 pub struct CollisionEvent {
     pub entity_a: kaadan_ecs::Entity,
     pub entity_b: kaadan_ecs::Entity,
-    pub started: bool,
+    pub event_type: CollisionEventType,
 }

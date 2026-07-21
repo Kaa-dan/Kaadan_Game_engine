@@ -9,8 +9,13 @@ description = "Asset loading and hot-reload pipeline for KaadanEngine"
 [lints]
 workspace = true
 
+[features]
+default = []
+hot-reload = ["dep:notify"]
+
 [dependencies]
 kaadan_math.workspace = true
 kaadan_core.workspace = true
 tracing.workspace = true
-notify.workspace = true
+image.workspace = true
+notify = { workspace = true, optional = true }

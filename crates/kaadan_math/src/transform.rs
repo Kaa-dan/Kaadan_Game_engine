@@ -4,6 +4,7 @@ use glam::{Affine3A, Mat4, Quat, Vec3};
 /// Stored as separate components for easy manipulation;
 /// composed into a matrix when needed for rendering.
 #[derive(Debug, Clone, Copy, PartialEq)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Transform {
     pub position: Vec3,
     pub rotation: Quat,

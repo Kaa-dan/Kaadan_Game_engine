@@ -1,6 +1,11 @@
 # Build
 /target/
 
+# Android build artifacts (staged .so + Gradle output)
+/mobile/android/jniLibs/
+/mobile/android/build/
+/mobile/android/.gradle/
+
 # IDE
 .idea/
 .vscode/

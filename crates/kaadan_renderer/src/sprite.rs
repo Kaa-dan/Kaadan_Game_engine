@@ -4,6 +4,7 @@ use crate::atlas::AtlasRegion;
 use crate::texture::Texture;
 
 /// Component: a 2D sprite attached to an entity.
+#[derive(Clone)]
 pub struct Sprite {
     /// Handle to the texture (or atlas texture)
     pub texture: Handle<Texture>,

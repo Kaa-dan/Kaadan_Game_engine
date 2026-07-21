@@ -13,6 +13,10 @@ members = [
     "crates/kaadan_ui",
     "crates/kaadan_physics",
     "crates/kaadan_app",
+    "crates/kaadan_editor",
+    "crates/kaadan_script",
+    "crates/kaadan_android",
+    "templates/game_template",
 ]
 
 [workspace.package]
@@ -40,6 +44,8 @@ gilrs = "0.11"
 # Rendering
 wgpu = "23"
 pollster = "0.4"
+# Shader front-end/validator (dev-only); major must match the wgpu 23 toolchain.
+naga = { version = "23", features = ["wgsl-in"] }
 
 # ECS
 hecs = "0.10"
@@ -47,14 +53,12 @@ rayon = "1"
 
 # Audio
 rodio = "0.20"
-
-# Assets
-tokio = { version = "1", features = ["rt-multi-thread", "fs", "sync"] }
 image = { version = "0.25", default-features = false, features = ["png", "jpeg"] }
 notify = "7"
 
 # Serialization
 serde = { version = "1", features = ["derive"] }
+serde_json = "1"
 ron = "0.8"
 
 # UI
@@ -63,6 +67,20 @@ fontdue = "0.9"
 # Physics
 rapier2d = { version = "0.22", features = ["simd-stable"] }
 parry2d = "0.17"
+
+# 3D model loading
+gltf = { version = "1.4", default-features = false, features = ["import", "utils"] }
+
+# Scripting (dylib hot-reload)
+libloading = "0.8"
+
+# Profiling
+puffin = "0.19"
+
+# Editor GUI (egui 0.30.x targets wgpu 23 / winit 0.30)
+egui = "0.30"
+egui-wgpu = "0.30"
+egui-winit = { version = "0.30", default-features = false }
 
 # Internal crates
 kaadan_math = { path = "crates/kaadan_math" }
@@ -76,7 +94,13 @@ kaadan_assets = { path = "crates/kaadan_assets" }
 kaadan_scene = { path = "crates/kaadan_scene" }
 kaadan_ui = { path = "crates/kaadan_ui" }
 kaadan_physics = { path = "crates/kaadan_physics" }
-kaadan_app = { path = "crates/kaadan_app" }
+# default-features off so mobile/static consumers can drop `libloading`;
+# consumers that need the hot-reload host (editor, desktop app) opt into it.
+kaadan_script = { path = "crates/kaadan_script", default-features = false }
+# default-features off so the mobile entry crate drops hot_reload/libloading;
+# consumers that want the desktop hot-reload host opt into the `hot_reload` feature.
+kaadan_app = { path = "crates/kaadan_app", default-features = false }
+game_template = { path = "templates/game_template" }
 
 [workspace.lints.clippy]
 # Correctness
@@ -95,3 +119,10 @@ redundant_clone = { level = "warn" }
 # Style
 module_name_repetitions = { level = "allow" }
 too_many_arguments = { level = "allow" }
+
+[profile.release]
+opt-level = 3
+lto = "thin"
+codegen-units = 1
+strip = true
+panic = "abort"

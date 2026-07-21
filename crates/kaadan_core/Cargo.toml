@@ -10,7 +10,6 @@ description = "Core types, logging, and error handling for KaadanEngine"
 workspace = true
 
 [dependencies]
-kaadan_math.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 thiserror.workspace = true

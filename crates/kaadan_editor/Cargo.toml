@@ -1,0 +1,46 @@
+[package]
+name = "kaadan_editor"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "kaadan_editor"
+path = "src/main.rs"
+
+[dependencies]
+kaadan_core.workspace = true
+kaadan_math.workspace = true
+kaadan_renderer.workspace = true
+kaadan_ecs.workspace = true
+kaadan_scene.workspace = true
+# `hot_reload` pulls in the `ScriptHost` used by editor Play mode to load and
+# hot-reload the gameplay dylib.
+kaadan_script = { workspace = true, features = ["hot_reload"] }
+
+egui.workspace = true
+egui-wgpu.workspace = true
+egui-winit.workspace = true
+# Docking layout for egui (0.15 targets egui 0.30, matching our workspace pin).
+egui_dock = "0.15"
+# Native file dialogs (Save/Open scene).
+rfd = "0.15"
+# Rust syntax highlighting in the Code panel. 0.2.11 is the last release pinned
+# to egui 0.30 (>=0.2.12 jumped to egui 0.31, which is incompatible with our
+# workspace pin). If/when the workspace bumps egui, bump this too.
+egui_code_editor = "=0.2.11"
+
+wgpu.workspace = true
+winit.workspace = true
+raw-window-handle.workspace = true
+pollster.workspace = true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+ron.workspace = true
+
+[lints]
+workspace = true
