@@ -131,6 +131,7 @@ impl EngineSetup<'_> {
         let material = mesh
             .material_index
             .and_then(|i| model.materials.into_iter().nth(i))
+            .map(|lm| lm.material)
             .unwrap_or_default();
         Ok((handle, material))
     }

@@ -89,6 +89,21 @@ impl ApplicationHandler for EditorApp {
 
         let response = gfx.egui_state.on_window_event(&gfx.window, &event);
 
+        // Capture physical key presses for Play mode's input (forwarded to the
+        // gameplay `InputState` each frame). egui still gets the event above.
+        if let WindowEvent::KeyboardInput { event: ke, .. } = &event {
+            if let winit::keyboard::PhysicalKey::Code(code) = ke.physical_key {
+                if let Some(key) = translate_key(code) {
+                    self.state
+                        .pending_input
+                        .push(kaadan_platform::InputEvent::Key(kaadan_platform::KeyEvent {
+                            key,
+                            pressed: ke.state.is_pressed(),
+                        }));
+                }
+            }
+        }
+
         match event {
             WindowEvent::CloseRequested => event_loop.exit(),
             WindowEvent::Resized(size) => {
@@ -116,13 +131,64 @@ impl ApplicationHandler for EditorApp {
     }
 }
 
+/// Translate a winit physical key into the engine's [`KeyCode`]. Only the keys
+/// gameplay commonly reads are mapped; everything else returns `None`.
+fn translate_key(code: winit::keyboard::KeyCode) -> Option<kaadan_platform::KeyCode> {
+    use kaadan_platform::KeyCode as K;
+    use winit::keyboard::KeyCode as W;
+    Some(match code {
+        W::KeyA => K::A,
+        W::KeyB => K::B,
+        W::KeyC => K::C,
+        W::KeyD => K::D,
+        W::KeyE => K::E,
+        W::KeyF => K::F,
+        W::KeyG => K::G,
+        W::KeyH => K::H,
+        W::KeyI => K::I,
+        W::KeyJ => K::J,
+        W::KeyK => K::K,
+        W::KeyL => K::L,
+        W::KeyM => K::M,
+        W::KeyN => K::N,
+        W::KeyO => K::O,
+        W::KeyP => K::P,
+        W::KeyQ => K::Q,
+        W::KeyR => K::R,
+        W::KeyS => K::S,
+        W::KeyT => K::T,
+        W::KeyU => K::U,
+        W::KeyV => K::V,
+        W::KeyW => K::W,
+        W::KeyX => K::X,
+        W::KeyY => K::Y,
+        W::KeyZ => K::Z,
+        W::Space => K::Space,
+        W::Enter => K::Enter,
+        W::Escape => K::Escape,
+        W::Tab => K::Tab,
+        W::ArrowUp => K::ArrowUp,
+        W::ArrowDown => K::ArrowDown,
+        W::ArrowLeft => K::ArrowLeft,
+        W::ArrowRight => K::ArrowRight,
+        W::ShiftLeft => K::ShiftLeft,
+        W::ShiftRight => K::ShiftRight,
+        W::ControlLeft => K::ControlLeft,
+        W::ControlRight => K::ControlRight,
+        _ => return None,
+    })
+}
+
 impl Gfx {
     fn render(&mut self, state: &mut EditorState) {
         // Advance the running gameplay session (behaviour start/update + any
         // hot-reload) before building the UI, so panels show the live state.
+        // Forward the input events captured since the last frame; drop them when
+        // not playing so the buffer never grows unbounded.
+        let input_events = std::mem::take(&mut state.pending_input);
         if state.playing {
             if let Some(session) = state.play_session.as_mut() {
-                session.tick(&mut self.viewport.world);
+                session.tick(&mut self.viewport.world, &input_events);
             }
         }
 
@@ -155,7 +221,29 @@ impl Gfx {
                         Err(e) => tracing::error!("load failed: {e}"),
                     }
                 }
+                crate::scene_io::IoRequest::ImportModel(path) => {
+                    match self.viewport.import_gltf(
+                        &self.renderer.device,
+                        &self.renderer.queue,
+                        &path,
+                    ) {
+                        Ok(root) => state.selected = Some(root),
+                        Err(e) => tracing::error!("import failed: {e}"),
+                    }
+                }
             }
+        }
+
+        // GameObject spawn: build primitive geometry (needs the device) and run
+        // the spawn through the undo stack.
+        if let Some(kind) = state.spawn_request.take() {
+            crate::spawn::perform(
+                kind,
+                &mut self.viewport,
+                &mut state.commands,
+                &mut state.selected,
+                &self.renderer.device,
+            );
         }
 
         // Play/Stop: snapshot on start, restore on stop.
@@ -187,8 +275,17 @@ impl Gfx {
                     state.playing = false;
                     state.selected = None;
                     state.gizmo_drag = None;
+                    // The gameplay crate may have been rebuilt during play; refresh
+                    // the behaviour list for the inspector.
+                    state.rescan_behaviours = true;
                 }
             }
+        }
+
+        // Re-probe the gameplay dylib for behaviour names when requested.
+        if std::mem::take(&mut state.rescan_behaviours) {
+            state.available_behaviours =
+                crate::play::probe_behaviour_names(&state.code_panel.crate_dir);
         }
 
         let ppp = full_output.pixels_per_point;

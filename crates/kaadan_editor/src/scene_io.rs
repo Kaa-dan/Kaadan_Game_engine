@@ -17,6 +17,8 @@ use kaadan_renderer::{DirectionalLight, PointLight, Sprite};
 pub enum IoRequest {
     Save(PathBuf),
     Load(PathBuf),
+    /// Import a glTF/`.glb` model into the current scene.
+    ImportModel(PathBuf),
 }
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
@@ -24,6 +26,9 @@ pub enum TextureSource {
     Checker { size: u32, cells: u32 },
     Solid { rgba: [u8; 4] },
     File { path: String },
+    /// An embedded image from an imported glTF/`.glb` file, referenced by the
+    /// source path + image index so it round-trips without a separate file.
+    GltfImage { path: String, image_index: usize },
 }
 
 impl TextureSource {
@@ -32,6 +37,9 @@ impl TextureSource {
             TextureSource::Checker { size, cells } => format!("checker:{size}:{cells}"),
             TextureSource::Solid { rgba } => format!("solid:{rgba:?}"),
             TextureSource::File { path } => format!("file:{path}"),
+            TextureSource::GltfImage { path, image_index } => {
+                format!("gltfimg:{path}:{image_index}")
+            }
         }
     }
 }
@@ -39,14 +47,30 @@ impl TextureSource {
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum MeshSource {
     Cube { half_extent: f32 },
-    Gltf { path: String },
+    Sphere { radius: f32 },
+    Plane { half_extent: f32 },
+    Cylinder { radius: f32, half_height: f32 },
+    Capsule { radius: f32, half_height: f32 },
+    /// A submesh of an imported glTF/`.glb` file. `mesh_index` selects which
+    /// primitive of the file this entity draws.
+    Gltf { path: String, mesh_index: usize },
 }
 
 impl MeshSource {
     pub fn key(&self) -> String {
         match self {
             MeshSource::Cube { half_extent } => format!("cube:{half_extent}"),
-            MeshSource::Gltf { path } => format!("gltf:{path}"),
+            MeshSource::Sphere { radius } => format!("sphere:{radius}"),
+            MeshSource::Plane { half_extent } => format!("plane:{half_extent}"),
+            MeshSource::Cylinder {
+                radius,
+                half_height,
+            } => format!("cylinder:{radius}:{half_height}"),
+            MeshSource::Capsule {
+                radius,
+                half_height,
+            } => format!("capsule:{radius}:{half_height}"),
+            MeshSource::Gltf { path, mesh_index } => format!("gltf:{path}:{mesh_index}"),
         }
     }
 }
@@ -175,6 +199,9 @@ pub struct EntityDesc {
     pub material: Option<MaterialDesc>,
     pub dir_light: Option<DirLightDesc>,
     pub point_light: Option<PointLightDesc>,
+    /// Names of gameplay behaviours attached to this entity (resolved on Play).
+    #[serde(default)]
+    pub scripts: Vec<String>,
     #[serde(default)]
     pub children: Vec<EntityDesc>,
 }

@@ -9,13 +9,14 @@ use std::path::Path;
 use kaadan_ecs::{Entity, World};
 use kaadan_math::{Color, Handle, HandleAllocator, Transform, Vec2, Vec3};
 use kaadan_renderer::{
-    create_cube_mesh, Camera2D, Camera3D, DirectionalLight, Mesh3D, Mesh3DGpu, PbrMaterial,
+    create_capsule_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
+    create_sphere_mesh, Camera2D, Camera3D, DirectionalLight, Mesh3D, Mesh3DGpu, PbrMaterial,
     PbrRenderer, PointLight, RenderTarget, Sprite, SpriteBatch, SpriteRenderer, Texture,
     PBR_SHADER, SPRITE_SHADER,
 };
 use kaadan_scene::{set_parent, Children, Parent};
 
-use crate::components::Name;
+use crate::components::{Name, Scripts};
 use crate::scene_io::{
     DirLightDesc, EditorScene, EntityDesc, MaterialDesc, MeshSource, PointLightDesc, SpriteDesc,
     TextureSource, TransformDesc,
@@ -65,7 +66,15 @@ impl Viewport {
             target,
             clear: Color::new(0.02, 0.02, 0.04, 1.0),
         };
-        viewport.seed_demo(device, queue);
+        // Frame the editor camera on the origin so a fresh, empty scene still
+        // opens with a sensible view.
+        viewport.camera3d.position = Vec3::new(0.0, 2.5, 6.0);
+        viewport.camera3d.target = Vec3::ZERO;
+        // The editor starts empty. Set KAADAN_EDITOR_DEMO=1 to spawn the built-in
+        // starter scene (lit cube + 2D sprite grid) instead.
+        if std::env::var_os("KAADAN_EDITOR_DEMO").is_some() {
+            viewport.seed_demo(device, queue);
+        }
         viewport
     }
 
@@ -187,9 +196,25 @@ impl Viewport {
         }
         let mesh = match source {
             MeshSource::Cube { half_extent } => create_cube_mesh(device, *half_extent),
-            MeshSource::Gltf { path } => {
-                tracing::warn!("glTF loading not supported in editor yet ({path}); using cube");
-                create_cube_mesh(device, 1.0)
+            MeshSource::Sphere { radius } => create_sphere_mesh(device, *radius),
+            MeshSource::Plane { half_extent } => create_plane_mesh(device, *half_extent),
+            MeshSource::Cylinder {
+                radius,
+                half_height,
+            } => create_cylinder_mesh(device, *radius, *half_height),
+            MeshSource::Capsule {
+                radius,
+                half_height,
+            } => create_capsule_mesh(device, *radius, *half_height),
+            MeshSource::Gltf { path, mesh_index } => {
+                // Reloading a saved scene: pull the submesh back out of the file.
+                match self.load_gltf_mesh(device, path, *mesh_index) {
+                    Some(mesh) => mesh,
+                    None => {
+                        tracing::error!("failed to reload glTF mesh {path}#{mesh_index}; using cube");
+                        create_cube_mesh(device, 1.0)
+                    }
+                }
             }
         };
         let handle = self.mesh_alloc.allocate();
@@ -197,6 +222,124 @@ impl Viewport {
         self.mesh_keys.insert(key, handle);
         self.mesh_sources.insert(handle, source.clone());
         handle
+    }
+
+    /// Load a single submesh from a glTF/`.glb` file by primitive index. Used
+    /// when reloading a saved scene that references imported geometry.
+    fn load_gltf_mesh(
+        &mut self,
+        device: &wgpu::Device,
+        path: &str,
+        mesh_index: usize,
+    ) -> Option<Mesh3DGpu> {
+        let bytes = std::fs::read(path).ok()?;
+        let model = kaadan_renderer::load_gltf(&bytes, path).ok()?;
+        let m = model.meshes.get(mesh_index)?;
+        Some(Mesh3DGpu::new(device, &m.vertices, &m.indices))
+    }
+
+    /// Register an already-built mesh under a source key (dedup on the key), used
+    /// by glTF import which uploads geometry it already has in memory.
+    fn insert_mesh_asset(&mut self, source: MeshSource, mesh: Mesh3DGpu) -> Handle<Mesh3DGpu> {
+        let key = source.key();
+        if let Some(handle) = self.mesh_keys.get(&key) {
+            return *handle;
+        }
+        let handle = self.mesh_alloc.allocate();
+        self.meshes.insert(handle, mesh);
+        self.mesh_keys.insert(key, handle);
+        self.mesh_sources.insert(handle, source);
+        handle
+    }
+
+    /// Register an already-built texture under a source key (dedup on the key).
+    fn insert_texture_asset(
+        &mut self,
+        device: &wgpu::Device,
+        source: TextureSource,
+        texture: Texture,
+    ) -> Handle<Texture> {
+        let key = source.key();
+        if let Some(handle) = self.texture_keys.get(&key) {
+            return *handle;
+        }
+        let handle = self.texture_alloc.allocate();
+        self.sprite.register_texture(device, handle, &texture);
+        self.textures.insert(handle, texture);
+        self.texture_keys.insert(key, handle);
+        self.texture_sources.insert(handle, source);
+        handle
+    }
+
+    /// Import a glTF/`.glb` file: upload its geometry + base-color textures and
+    /// spawn one parent "empty" with a child mesh entity per submesh. Returns the
+    /// parent entity so the caller can select it.
+    pub fn import_gltf(
+        &mut self,
+        device: &wgpu::Device,
+        queue: &wgpu::Queue,
+        path: &Path,
+    ) -> Result<Entity, String> {
+        let path_str = path.to_string_lossy().to_string();
+        let bytes = std::fs::read(path).map_err(|e| e.to_string())?;
+        let model = kaadan_renderer::load_gltf(&bytes, &path_str).map_err(|e| e.to_string())?;
+        if model.meshes.is_empty() {
+            return Err(format!("glTF {path_str} contains no meshes"));
+        }
+
+        // Upload embedded images once, keyed so they round-trip on scene reload.
+        let mut image_handles: Vec<Handle<Texture>> = Vec::with_capacity(model.images.len());
+        for (i, img) in model.images.iter().enumerate() {
+            let texture = Texture::from_rgba8(
+                device,
+                queue,
+                &img.rgba,
+                img.width.max(1),
+                img.height.max(1),
+                "gltf_image",
+            );
+            let source = TextureSource::GltfImage {
+                path: path_str.clone(),
+                image_index: i,
+            };
+            image_handles.push(self.insert_texture_asset(device, source, texture));
+        }
+
+        let root_name = path
+            .file_stem()
+            .map(|s| s.to_string_lossy().to_string())
+            .unwrap_or_else(|| "Model".to_string());
+        let root = self.world.spawn((Name::new(root_name), Transform::IDENTITY));
+
+        for (i, lm) in model.meshes.iter().enumerate() {
+            let mesh = Mesh3DGpu::new(device, &lm.vertices, &lm.indices);
+            let source = MeshSource::Gltf {
+                path: path_str.clone(),
+                mesh_index: i,
+            };
+            let handle = self.insert_mesh_asset(source, mesh);
+
+            let mut material = PbrMaterial::default();
+            if let Some(mat) = lm.material_index.and_then(|mi| model.materials.get(mi)) {
+                material = mat.material.clone();
+                if let Some(img_idx) = mat.base_color_image {
+                    material.base_color_texture = image_handles.get(img_idx).copied();
+                }
+            }
+
+            let child = self.world.spawn((
+                Mesh3D::new(handle),
+                Transform::IDENTITY,
+                material,
+                Name::new(format!("Mesh {i}")),
+            ));
+            set_parent(&mut self.world, child, root);
+        }
+        tracing::info!(
+            "imported glTF {path_str} ({} submeshes)",
+            model.meshes.len()
+        );
+        Ok(root)
     }
 
     fn texture_source(&self, handle: Handle<Texture>) -> Option<TextureSource> {
@@ -318,6 +461,12 @@ impl Viewport {
             .get::<PointLight>(entity)
             .ok()
             .map(|p| PointLightDesc::from(&*p));
+        let scripts = self
+            .world
+            .get::<Scripts>(entity)
+            .ok()
+            .map(|s| s.0.clone())
+            .unwrap_or_default();
         let children = self
             .world
             .get::<Children>(entity)
@@ -336,6 +485,7 @@ impl Viewport {
             material,
             dir_light,
             point_light,
+            scripts,
             children,
         }
     }
@@ -401,6 +551,9 @@ impl Viewport {
             }
             if let Some(p) = &desc.point_light {
                 let _ = w.insert_one(entity, PointLight::from(p));
+            }
+            if !desc.scripts.is_empty() {
+                let _ = w.insert_one(entity, Scripts(desc.scripts.clone()));
             }
         }
         if let Some(parent) = parent {
@@ -487,6 +640,26 @@ fn build_texture(device: &wgpu::Device, queue: &wgpu::Queue, source: &TextureSou
                 missing_texture(device, queue)
             }
         },
+        TextureSource::GltfImage { path, image_index } => {
+            match std::fs::read(path).ok().and_then(|bytes| {
+                kaadan_renderer::load_gltf(&bytes, path)
+                    .ok()
+                    .and_then(|m| m.images.into_iter().nth(*image_index))
+            }) {
+                Some(img) => Texture::from_rgba8(
+                    device,
+                    queue,
+                    &img.rgba,
+                    img.width,
+                    img.height,
+                    "gltf_image",
+                ),
+                None => {
+                    tracing::error!("failed to load glTF image {path}#{image_index}");
+                    missing_texture(device, queue)
+                }
+            }
+        }
     }
 }
 

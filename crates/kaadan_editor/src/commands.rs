@@ -11,7 +11,7 @@ use std::collections::HashMap;
 use kaadan_ecs::{Entity, World};
 use kaadan_math::Transform;
 use kaadan_renderer::{DirectionalLight, Mesh3D, PbrMaterial, PointLight, Sprite};
-use kaadan_scene::{set_parent, Children, Parent};
+use kaadan_scene::{remove_parent, set_parent, Children, Parent};
 
 use crate::components::Name;
 
@@ -82,9 +82,35 @@ pub struct DeleteData {
     live_ids: Vec<Entity>,
 }
 
+/// A committed transform edit (from a gizmo drag or inspector field), captured
+/// as before/after so it can be undone as a single step.
+pub struct EditTransformData {
+    entity: Entity,
+    before: Transform,
+    after: Transform,
+}
+
+/// A hierarchy reparent: moving `child` from `old_parent` to `new_parent`
+/// (`None` = a root). Stores both sides so it can be undone.
+pub struct ReparentData {
+    child: Entity,
+    old_parent: Option<Entity>,
+    new_parent: Option<Entity>,
+}
+
 pub enum Command {
     Spawn(Box<SpawnData>),
     Delete(DeleteData),
+    EditTransform(EditTransformData),
+    Reparent(ReparentData),
+}
+
+/// Attach `child` to `parent` (`Some`) or detach it to a root (`None`).
+fn apply_parent(world: &mut World, child: Entity, parent: Option<Entity>) {
+    match parent {
+        Some(p) if world.is_alive(p) => set_parent(world, child, p),
+        _ => remove_parent(world, child),
+    }
 }
 
 impl Command {
@@ -99,6 +125,15 @@ impl Command {
         }))
     }
 
+    /// Spawn a single entity from a prepared snapshot (used by the GameObject
+    /// menu, which resolves any mesh handle before building the template).
+    pub fn spawn(template: EntitySnapshot) -> Self {
+        Command::Spawn(Box::new(SpawnData {
+            template,
+            live: None,
+        }))
+    }
+
     pub fn duplicate(world: &World, source: Entity) -> Self {
         let mut template = snapshot_entity(world, source);
         if let Some(name) = &template.name {
@@ -108,6 +143,27 @@ impl Command {
             template,
             live: None,
         }))
+    }
+
+    /// Record a transform change on `entity`. The live world already holds
+    /// `after` (the edit happened interactively); `apply`/`undo` just re-set it.
+    pub fn edit_transform(entity: Entity, before: Transform, after: Transform) -> Self {
+        Command::EditTransform(EditTransformData {
+            entity,
+            before,
+            after,
+        })
+    }
+
+    /// Reparent `child` under `new_parent` (`None` = make it a root), capturing
+    /// its current parent for undo.
+    pub fn reparent(world: &World, child: Entity, new_parent: Option<Entity>) -> Self {
+        let old_parent = world.get::<Parent>(child).ok().map(|p| p.0);
+        Command::Reparent(ReparentData {
+            child,
+            old_parent,
+            new_parent,
+        })
     }
 
     pub fn delete(world: &World, root: Entity) -> Self {
@@ -152,6 +208,14 @@ impl Command {
                     *selection = None;
                 }
             }
+            Command::EditTransform(d) => {
+                if let Ok(mut t) = world.get_mut::<Transform>(d.entity) {
+                    *t = d.after;
+                }
+            }
+            Command::Reparent(d) => {
+                apply_parent(world, d.child, d.new_parent);
+            }
         }
     }
 
@@ -185,8 +249,23 @@ impl Command {
                 *selection = new_ids.first().copied();
                 d.live_ids = new_ids;
             }
+            Command::EditTransform(d) => {
+                if let Ok(mut t) = world.get_mut::<Transform>(d.entity) {
+                    *t = d.before;
+                }
+            }
+            Command::Reparent(d) => {
+                apply_parent(world, d.child, d.old_parent);
+            }
         }
     }
+}
+
+/// True if `maybe_ancestor` is `node` or one of its (transitive) descendants —
+/// used to reject reparenting an entity under its own subtree (which would make
+/// a cycle).
+pub fn is_self_or_descendant(world: &World, node: Entity, maybe_ancestor: Entity) -> bool {
+    gather_subtree(world, node).contains(&maybe_ancestor)
 }
 
 fn gather_subtree(world: &World, root: Entity) -> Vec<Entity> {

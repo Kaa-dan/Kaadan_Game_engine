@@ -53,4 +53,37 @@ impl Camera3D {
                 radius * new_pitch.cos() * new_yaw.sin(),
             );
     }
+
+    /// Distance from the eye to the target.
+    pub fn distance(&self) -> f32 {
+        (self.position - self.target).length()
+    }
+
+    /// Slide both eye and target within the camera's view plane (screen-space
+    /// pan). `right`/`up` are in world units along the camera's right and up axes.
+    pub fn pan(&mut self, right: f32, up: f32) {
+        let forward = (self.target - self.position).normalize_or_zero();
+        let right_axis = forward.cross(self.up).normalize_or_zero();
+        let up_axis = right_axis.cross(forward).normalize_or_zero();
+        let delta = right_axis * right + up_axis * up;
+        self.position += delta;
+        self.target += delta;
+    }
+
+    /// Move the eye toward (positive) or away from (negative) the target,
+    /// keeping the target fixed. Distance is clamped so it can't cross the target.
+    pub fn dolly(&mut self, amount: f32) {
+        let offset = self.position - self.target;
+        let dist = offset.length();
+        let new_dist = (dist - amount).max(0.05);
+        self.position = self.target + offset.normalize_or_zero() * new_dist;
+    }
+
+    /// Recenter the target on `point`, preserving the current view direction and
+    /// distance (frame-selected behaviour).
+    pub fn focus_on(&mut self, point: Vec3) {
+        let offset = self.position - self.target;
+        self.target = point;
+        self.position = point + offset;
+    }
 }

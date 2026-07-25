@@ -1215,7 +1215,9 @@ name = "game_template"
 version = "0.1.0"
 dependencies = [
  "kaadan_ecs",
+ "kaadan_input",
  "kaadan_math",
+ "kaadan_platform",
  "kaadan_renderer",
  "kaadan_script",
 ]
@@ -1871,7 +1873,9 @@ dependencies = [
  "egui_dock",
  "kaadan_core",
  "kaadan_ecs",
+ "kaadan_input",
  "kaadan_math",
+ "kaadan_platform",
  "kaadan_renderer",
  "kaadan_scene",
  "kaadan_script",

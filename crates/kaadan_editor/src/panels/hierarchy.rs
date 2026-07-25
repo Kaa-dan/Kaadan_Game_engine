@@ -47,22 +47,57 @@ pub fn show(ui: &mut egui::Ui, world: &mut World, state: &mut EditorState) {
 
     let rows = collect(world);
     let mut clicked = None;
-    egui::ScrollArea::vertical().show(ui, |ui| {
-        if rows.is_empty() {
-            ui.label("(empty scene)");
-        }
-        for row in &rows {
-            ui.horizontal(|ui| {
-                ui.add_space(row.depth as f32 * 14.0);
-                let is_selected = state.selected == Some(row.entity);
-                if ui.selectable_label(is_selected, &row.label).clicked() {
-                    clicked = Some(row.entity);
-                }
-            });
-        }
+    // (child, new_parent): a pending drag-and-drop reparent. `None` parent means
+    // "drop on empty space" → detach to a root.
+    let mut reparent: Option<(Entity, Option<Entity>)> = None;
+
+    // Wrap the list in a drop zone so releasing over empty space unparents.
+    let (_, dropped_to_background) = ui.dnd_drop_zone::<Entity, _>(egui::Frame::none(), |ui| {
+        egui::ScrollArea::vertical().show(ui, |ui| {
+            if rows.is_empty() {
+                ui.label("(empty scene)");
+            }
+            for row in &rows {
+                ui.horizontal(|ui| {
+                    ui.add_space(row.depth as f32 * 14.0);
+                    let is_selected = state.selected == Some(row.entity);
+                    let id = egui::Id::new(("hier_row", row.entity));
+                    let inner = ui
+                        .dnd_drag_source(id, row.entity, |ui| {
+                            ui.selectable_label(is_selected, &row.label)
+                        });
+                    if inner.inner.clicked() {
+                        clicked = Some(row.entity);
+                    }
+                    // Released over this row → make the dragged entity its child.
+                    if let Some(payload) = inner.response.dnd_release_payload::<Entity>() {
+                        reparent = Some((*payload, Some(row.entity)));
+                    }
+                });
+            }
+        });
     });
+    // A drop that didn't land on a row detaches the entity to the root level.
+    if reparent.is_none() {
+        if let Some(payload) = dropped_to_background {
+            reparent = Some((*payload, None));
+        }
+    }
+
     if let Some(e) = clicked {
         state.selected = Some(e);
+    }
+
+    // Apply a reparent, rejecting cycles (dropping an entity onto its own subtree).
+    if let Some((child, new_parent)) = reparent {
+        let valid = match new_parent {
+            Some(p) => p != child && !crate::commands::is_self_or_descendant(world, child, p),
+            None => true,
+        };
+        if valid {
+            let cmd = Command::reparent(world, child, new_parent);
+            state.commands.run(world, &mut state.selected, cmd);
+        }
     }
 
     match action {
