@@ -18,3 +18,5 @@ kaadan_script.workspace = true
 kaadan_ecs.workspace = true
 kaadan_math.workspace = true
 kaadan_renderer.workspace = true
+kaadan_input.workspace = true
+kaadan_platform.workspace = true

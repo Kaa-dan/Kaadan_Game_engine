@@ -5,6 +5,7 @@ use kaadan_ecs::World;
 use crate::gizmo::GizmoMode;
 use crate::play::PlayRequest;
 use crate::scene_io::IoRequest;
+use crate::spawn::SpawnKind;
 use crate::state::EditorState;
 
 enum Action {
@@ -37,10 +38,38 @@ pub fn show(ui: &mut egui::Ui, state: &mut EditorState, world: &mut World) {
                 }
             }
             ui.separator();
+            if ui.button("Import Model…").clicked() {
+                ui.close_menu();
+                if let Some(path) = rfd::FileDialog::new()
+                    .add_filter("glTF model", &["gltf", "glb"])
+                    .pick_file()
+                {
+                    state.io_request = Some(IoRequest::ImportModel(path));
+                }
+            }
+            ui.separator();
             if ui.button("Quit").clicked() {
                 action = Some(Action::Quit);
                 ui.close_menu();
             }
+        });
+        ui.menu_button("GameObject", |ui| {
+            let mut spawn = |ui: &mut egui::Ui, label: &str, kind: SpawnKind| {
+                if ui.button(label).clicked() {
+                    state.spawn_request = Some(kind);
+                    ui.close_menu();
+                }
+            };
+            spawn(ui, "Empty", SpawnKind::Empty);
+            ui.separator();
+            spawn(ui, "Cube", SpawnKind::Cube);
+            spawn(ui, "Sphere", SpawnKind::Sphere);
+            spawn(ui, "Plane", SpawnKind::Plane);
+            spawn(ui, "Cylinder", SpawnKind::Cylinder);
+            spawn(ui, "Capsule", SpawnKind::Capsule);
+            ui.separator();
+            spawn(ui, "Directional Light", SpawnKind::DirectionalLight);
+            spawn(ui, "Point Light", SpawnKind::PointLight);
         });
         ui.menu_button("Edit", |ui| {
             if ui

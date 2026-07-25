@@ -50,10 +50,16 @@ pub struct EditorState {
     pub commands: UndoStack,
     /// A pending save/load, performed by the app loop (which owns the GPU device).
     pub io_request: Option<IoRequest>,
+    /// A pending GameObject spawn, performed by the app loop (needs the GPU
+    /// device to build primitive geometry).
+    pub spawn_request: Option<crate::spawn::SpawnKind>,
     /// Active viewport gizmo mode (move/rotate/scale).
     pub gizmo_mode: GizmoMode,
     /// Which gizmo handle is being dragged this gesture, if any.
     pub gizmo_drag: Option<DragTarget>,
+    /// The selected entity's transform captured at the start of a viewport drag,
+    /// so the whole gesture commits as one undoable [`Command::EditTransform`].
+    pub xform_edit: Option<(Entity, kaadan_math::Transform)>,
     /// True while Play mode is running game systems.
     pub playing: bool,
     /// A pending Play/Stop transition, performed by the app loop.
@@ -72,6 +78,14 @@ pub struct EditorState {
     pub code_panel: CodePanelState,
     /// Output (status + diagnostics) from the most recent / running cargo build.
     pub build_output: BuildOutput,
+    /// Keyboard/pointer events captured this frame, forwarded into Play mode's
+    /// `InputState` so scripts can read the keyboard. Drained every frame.
+    pub pending_input: Vec<kaadan_platform::InputEvent>,
+    /// Behaviour names offered by the "Add Behaviour" inspector menu, discovered
+    /// by probing the built gameplay dylib. Refreshed on demand / on Stop.
+    pub available_behaviours: Vec<String>,
+    /// When set, the app re-probes the gameplay dylib for behaviour names.
+    pub rescan_behaviours: bool,
 }
 
 impl Default for EditorState {
@@ -88,8 +102,10 @@ impl EditorState {
             selected: None,
             commands: UndoStack::default(),
             io_request: None,
+            spawn_request: None,
             gizmo_mode: GizmoMode::default(),
             gizmo_drag: None,
+            xform_edit: None,
             playing: false,
             play_request: None,
             play_snapshot: None,
@@ -98,6 +114,10 @@ impl EditorState {
             registry: default_registry(),
             code_panel: CodePanelState::default(),
             build_output: BuildOutput::default(),
+            pending_input: Vec::new(),
+            available_behaviours: Vec::new(),
+            // Probe once on startup so the menu is populated if a dylib exists.
+            rescan_behaviours: true,
         }
     }
 }

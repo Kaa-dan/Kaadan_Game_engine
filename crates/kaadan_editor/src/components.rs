@@ -10,3 +10,9 @@ impl Name {
         Self(name.into())
     }
 }
+
+/// Names of the gameplay behaviours attached to this entity. Serialized to
+/// `EntityDesc.scripts`; on Play, each name is resolved against the loaded
+/// plugin's behaviour registry and attached as a `ScriptComponent`.
+#[derive(Clone, Default)]
+pub struct Scripts(pub Vec<String>);

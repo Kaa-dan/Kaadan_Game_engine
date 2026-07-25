@@ -19,6 +19,9 @@ kaadan_scene.workspace = true
 # `hot_reload` pulls in the `ScriptHost` used by editor Play mode to load and
 # hot-reload the gameplay dylib.
 kaadan_script = { workspace = true, features = ["hot_reload"] }
+# Input forwarding into Play mode so scripts can read the keyboard (WASD, etc.).
+kaadan_input.workspace = true
+kaadan_platform.workspace = true
 
 egui.workspace = true
 egui-wgpu.workspace = true

@@ -13,8 +13,12 @@
 
 use std::path::{Path, PathBuf};
 
-use kaadan_ecs::{App, World};
-use kaadan_script::ScriptHost;
+use kaadan_ecs::{App, Entity, World};
+use kaadan_input::InputState;
+use kaadan_platform::InputEvent;
+use kaadan_script::{BehaviourRegistry, ScriptComponent, ScriptHost};
+
+use crate::components::Scripts;
 
 #[derive(Clone, Copy)]
 pub enum PlayRequest {
@@ -39,6 +43,9 @@ impl PlaySession {
     /// on return the editor's world holds the freshly attached behaviours.
     pub fn start(world: &mut World, crate_dir: &Path) -> Self {
         let mut app = App::new();
+        // Input resource so scripts can read the keyboard while playing; fed each
+        // frame from the editor's forwarded events in `tick`.
+        app.insert_resource(InputState::new());
         std::mem::swap(world, &mut app.world);
 
         let host = match game_dylib_path(crate_dir) {
@@ -73,21 +80,91 @@ impl PlaySession {
             }
         };
 
+        // Attach behaviours named on each entity (data-driven, via the plugin's
+        // registry) now that the plugin has registered its factories.
+        attach_scripts(&mut app);
+
         std::mem::swap(world, &mut app.world);
         Self { app, host }
     }
 
-    /// Advance the running scene by one frame: hot-reload the gameplay dylib if
-    /// it changed on disk, then run the runtime's systems (behaviour `start` /
-    /// `update`) against `world`.
-    pub fn tick(&mut self, world: &mut World) {
+    /// Advance the running scene by one frame: forward this frame's input events,
+    /// hot-reload the gameplay dylib if it changed on disk (re-attaching scripts),
+    /// then run the runtime's systems (behaviour `start` / `update`).
+    pub fn tick(&mut self, world: &mut World, events: &[InputEvent]) {
         std::mem::swap(world, &mut self.app.world);
-        if let Some(host) = self.host.as_mut() {
-            host.poll(&mut self.app);
+
+        if let Some(input) = self.app.resources.get_mut::<InputState>() {
+            input.begin_frame();
+            for event in events {
+                input.process_event(event);
+            }
         }
+
+        // A hot-reload strips every ScriptComponent (see ScriptHost::reload), so
+        // re-attach from the entities' script names after one lands.
+        let reloaded = self
+            .host
+            .as_mut()
+            .map(|host| host.poll(&mut self.app))
+            .unwrap_or(false);
+        if reloaded {
+            attach_scripts(&mut self.app);
+        }
+
         self.app.tick();
         std::mem::swap(world, &mut self.app.world);
     }
+}
+
+/// Attach a [`ScriptComponent`] to each entity for every behaviour name in its
+/// [`Scripts`] component, constructing behaviours from the plugin's
+/// [`BehaviourRegistry`]. Unknown names are logged and skipped.
+fn attach_scripts(app: &mut App) {
+    let targets: Vec<(Entity, Vec<String>)> = app
+        .world
+        .query::<&Scripts>()
+        .iter()
+        .map(|(e, s)| (e, s.0.clone()))
+        .collect();
+
+    for (entity, names) in targets {
+        for name in names {
+            let made = app
+                .resources
+                .get::<BehaviourRegistry>()
+                .and_then(|r| r.create(&name));
+            match made {
+                Some(behaviour) => {
+                    let _ = app
+                        .world
+                        .inner_mut()
+                        .insert_one(entity, ScriptComponent::from_box(behaviour));
+                }
+                None => tracing::warn!(
+                    "no registered behaviour '{name}' (did you Build the game crate?)"
+                ),
+            }
+        }
+    }
+}
+
+/// Load the gameplay dylib in isolation and return the behaviour names it
+/// registers, so the editor's "Add Behaviour" menu can offer them without
+/// entering Play mode. Returns empty if the dylib isn't built or fails to load.
+pub fn probe_behaviour_names(crate_dir: &Path) -> Vec<String> {
+    let Some(path) = game_dylib_path(crate_dir).filter(|p| p.exists()) else {
+        return Vec::new();
+    };
+    let mut app = App::new();
+    let mut host = ScriptHost::new(path);
+    if host.load(&mut app).is_err() {
+        return Vec::new();
+    }
+    app.resources
+        .get::<BehaviourRegistry>()
+        .map(|r| r.names().map(str::to_string).collect())
+        .unwrap_or_default()
 }
 
 /// Resolve the built cdylib path for the gameplay crate at `crate_dir`.
@@ -140,7 +217,7 @@ mod tests {
         assert!(session.host.is_none());
         assert!(world.is_alive(e), "world must be swapped back after start");
 
-        session.tick(&mut world);
+        session.tick(&mut world, &[]);
         assert!(world.is_alive(e), "world must be swapped back after tick");
         assert_eq!(world.len(), 1, "no entities gained or lost");
     }

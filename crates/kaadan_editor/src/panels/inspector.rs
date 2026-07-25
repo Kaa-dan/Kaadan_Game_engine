@@ -7,13 +7,15 @@ use kaadan_math::{Color, EulerRot, Quat, Transform};
 use kaadan_renderer::{DirectionalLight, Mesh3D, PbrMaterial, PointLight, Sprite};
 use kaadan_script::ComponentRegistry;
 
-use crate::components::Name;
+use crate::components::{Name, Scripts};
 
 pub fn show(
     ui: &mut egui::Ui,
     world: &mut World,
     selected: Option<Entity>,
     registry: &ComponentRegistry,
+    available_behaviours: &[String],
+    rescan: &mut bool,
 ) {
     ui.heading("Inspector");
     ui.separator();
@@ -113,8 +115,82 @@ pub fn show(
         registry.remove(world, entity, name);
     }
 
+    scripts_section(ui, world, entity, available_behaviours, rescan);
+
     ui.separator();
     add_component_combo(ui, world, entity, registry);
+}
+
+/// Scripts / behaviours attached to the entity. Behaviours are named references
+/// resolved on Play against the built gameplay crate; the dropdown lists the
+/// names discovered by probing that crate's dylib (refresh with ↻).
+fn scripts_section(
+    ui: &mut egui::Ui,
+    world: &mut World,
+    entity: Entity,
+    available: &[String],
+    rescan: &mut bool,
+) {
+    ui.separator();
+    ui.horizontal(|ui| {
+        ui.strong("Scripts");
+        if ui
+            .small_button("↻")
+            .on_hover_text("Rescan the built game crate for behaviours")
+            .clicked()
+        {
+            *rescan = true;
+        }
+    });
+
+    // Existing attached behaviours, each with a remove button.
+    let current: Vec<String> = world
+        .get::<Scripts>(entity)
+        .map(|s| s.0.clone())
+        .unwrap_or_default();
+    let mut remove: Option<usize> = None;
+    for (i, name) in current.iter().enumerate() {
+        ui.horizontal(|ui| {
+            ui.label(format!("• {name}"));
+            if ui.small_button("×").on_hover_text("Detach").clicked() {
+                remove = Some(i);
+            }
+        });
+    }
+    if let Some(i) = remove {
+        if let Ok(mut s) = world.get_mut::<Scripts>(entity) {
+            if i < s.0.len() {
+                s.0.remove(i);
+            }
+        }
+    }
+
+    // Add-behaviour dropdown.
+    if available.is_empty() {
+        ui.label("(Build the game crate, then press ↻)");
+    } else {
+        let mut pending: Option<String> = None;
+        egui::ComboBox::from_id_salt("inspector_add_behaviour")
+            .selected_text("Add behaviour…")
+            .show_ui(ui, |ui| {
+                for name in available {
+                    if ui.selectable_label(false, name).clicked() {
+                        pending = Some(name.clone());
+                    }
+                }
+            });
+        if let Some(name) = pending {
+            if world.get::<Scripts>(entity).is_ok() {
+                if let Ok(mut s) = world.get_mut::<Scripts>(entity) {
+                    if !s.0.contains(&name) {
+                        s.0.push(name);
+                    }
+                }
+            } else {
+                let _ = world.inner_mut().insert_one(entity, Scripts(vec![name]));
+            }
+        }
+    }
 }
 
 /// Header row with a `×` Remove button on the right; the registry name doubles

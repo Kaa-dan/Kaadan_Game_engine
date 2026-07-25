@@ -28,7 +28,10 @@ pub use camera2d::Camera2D;
 pub use camera3d::Camera3D;
 pub use material::{DirectionalLight, PbrMaterial, PointLight};
 pub use mesh::Mesh;
-pub use mesh3d::{create_cube_mesh, Mesh3D, Mesh3DGpu};
+pub use mesh3d::{
+    create_capsule_mesh, create_cube_mesh, create_cylinder_mesh, create_plane_mesh,
+    create_sphere_mesh, Mesh3D, Mesh3DGpu,
+};
 pub use pbr_renderer::PbrRenderer;
 pub use pipeline::{
     create_basic_pipeline, create_pbr_pipeline, create_sprite_pipeline,
@@ -45,7 +48,7 @@ pub use vertex::Vertex;
 pub use vertex3d::Vertex3D;
 
 #[cfg(feature = "gltf")]
-pub use gltf_loader::{load_gltf, GltfModel, LoadedMesh};
+pub use gltf_loader::{load_gltf, GltfImageData, GltfModel, LoadedMaterial, LoadedMesh};
 
 /// Basic WGSL shader source for colored geometry.
 pub const BASIC_SHADER: &str = include_str!("../../../assets/shaders/basic.wgsl");

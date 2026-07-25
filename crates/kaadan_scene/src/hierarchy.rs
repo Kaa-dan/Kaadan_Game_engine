@@ -38,6 +38,18 @@ pub fn set_parent(world: &mut kaadan_ecs::World, child: Entity, parent: Entity) 
     let _ = world.inner_mut().insert_one(parent, Children(vec![child]));
 }
 
+/// Detach `child` from its current parent, making it a root. Removes it from the
+/// old parent's [`Children`] list and drops its [`Parent`] component. No-op if it
+/// has no parent.
+pub fn remove_parent(world: &mut kaadan_ecs::World, child: Entity) {
+    if let Ok(prev) = world.get::<Parent>(child).map(|p| p.0) {
+        if let Ok(mut children) = world.get_mut::<Children>(prev) {
+            children.0.retain(|&e| e != child);
+        }
+        let _ = world.inner_mut().remove_one::<Parent>(child);
+    }
+}
+
 /// System: propagate transforms down the hierarchy to any depth.
 ///
 /// Each root (an entity with a `Transform` and no `Parent`) seeds the walk with
