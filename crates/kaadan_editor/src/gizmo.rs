@@ -208,7 +208,7 @@ fn draw(ui: &egui::Ui, rect: egui::Rect, view: &View, origin: Vec3, mode: GizmoM
     };
 
     if matches!(mode, GizmoMode::Rotate) {
-        painter.circle_stroke(s0, 36.0, Stroke::new(2.0, Color32::from_gray(220)));
+        painter.circle_stroke(s0, 36.0, Stroke::new(2.0_f32, Color32::from_gray(220)));
         return;
     }
 
@@ -220,7 +220,7 @@ fn draw(ui: &egui::Ui, rect: egui::Rect, view: &View, origin: Vec3, mode: GizmoM
             continue;
         }
         let end = s0 + dir.normalized() * HANDLE_PX;
-        painter.line_segment([s0, end], Stroke::new(2.5, axis.color()));
+        painter.line_segment([s0, end], Stroke::new(2.5_f32, axis.color()));
         match mode {
             GizmoMode::Scale => {
                 let b = egui::Rect::from_center_size(end, EVec2::splat(8.0));
