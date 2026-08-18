@@ -96,10 +96,12 @@ impl ApplicationHandler for EditorApp {
                 if let Some(key) = translate_key(code) {
                     self.state
                         .pending_input
-                        .push(kaadan_platform::InputEvent::Key(kaadan_platform::KeyEvent {
-                            key,
-                            pressed: ke.state.is_pressed(),
-                        }));
+                        .push(kaadan_platform::InputEvent::Key(
+                            kaadan_platform::KeyEvent {
+                                key,
+                                pressed: ke.state.is_pressed(),
+                            },
+                        ));
                 }
             }
         }

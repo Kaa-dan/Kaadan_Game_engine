@@ -201,7 +201,10 @@ mod tests {
         tick_ms(&mut app, 100);
 
         let pos = app.world.get::<Transform>(entity).unwrap().position;
-        assert!(pos.x > 0.0, "Player should have moved along +X, got {pos:?}");
+        assert!(
+            pos.x > 0.0,
+            "Player should have moved along +X, got {pos:?}"
+        );
     }
 
     /// `build` is idempotent across a simulated hot-reload: re-registering the

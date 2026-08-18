@@ -62,10 +62,9 @@ pub fn show(ui: &mut egui::Ui, world: &mut World, state: &mut EditorState) {
                     ui.add_space(row.depth as f32 * 14.0);
                     let is_selected = state.selected == Some(row.entity);
                     let id = egui::Id::new(("hier_row", row.entity));
-                    let inner = ui
-                        .dnd_drag_source(id, row.entity, |ui| {
-                            ui.selectable_label(is_selected, &row.label)
-                        });
+                    let inner = ui.dnd_drag_source(id, row.entity, |ui| {
+                        ui.selectable_label(is_selected, &row.label)
+                    });
                     if inner.inner.clicked() {
                         clicked = Some(row.entity);
                     }

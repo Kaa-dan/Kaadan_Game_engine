@@ -211,7 +211,9 @@ impl Viewport {
                 match self.load_gltf_mesh(device, path, *mesh_index) {
                     Some(mesh) => mesh,
                     None => {
-                        tracing::error!("failed to reload glTF mesh {path}#{mesh_index}; using cube");
+                        tracing::error!(
+                            "failed to reload glTF mesh {path}#{mesh_index}; using cube"
+                        );
                         create_cube_mesh(device, 1.0)
                     }
                 }
@@ -309,7 +311,9 @@ impl Viewport {
             .file_stem()
             .map(|s| s.to_string_lossy().to_string())
             .unwrap_or_else(|| "Model".to_string());
-        let root = self.world.spawn((Name::new(root_name), Transform::IDENTITY));
+        let root = self
+            .world
+            .spawn((Name::new(root_name), Transform::IDENTITY));
 
         for (i, lm) in model.meshes.iter().enumerate() {
             let mesh = Mesh3DGpu::new(device, &lm.vertices, &lm.indices);
