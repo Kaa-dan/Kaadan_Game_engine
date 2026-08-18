@@ -21,6 +21,21 @@ mod behaviour;
 mod context;
 mod registry;
 
+/// Version of the host↔plugin ABI.
+///
+/// Every plugin exports this value via [`kaadan_game!`]; [`ScriptHost`] refuses
+/// to load a plugin whose value differs from the host's. **Bump this whenever
+/// anything reachable through [`ScriptContext`] changes shape** — that includes
+/// `App`, `World`, `Resources`, `Stage`, and the `Behaviour` trait's vtable.
+///
+/// This catches the common failure: a stale dylib left in `target/` from an
+/// older build being silently loaded and reinterpreted. It does **not** catch
+/// toolchain drift — two builds from the same source with different `rustc`
+/// versions still report the same ABI version while having different layouts,
+/// because Rust has no stable ABI. Building host and plugin from one workspace
+/// in one cargo invocation remains the actual contract (`docs/scripting/abi.md`).
+pub const ABI_VERSION: u64 = 1;
+
 pub use behaviour::{
     behaviour_driver_system, clear_all_behaviours, Behaviour, BehaviourContext, BehaviourFactory,
     BehaviourRegistry, ScriptComponent, BEHAVIOUR_DRIVER_SYSTEM,
@@ -64,6 +79,16 @@ macro_rules! kaadan_game {
         #[no_mangle]
         pub extern "C" fn kaadan_register(ctx: &mut $crate::ScriptContext) {
             $build(ctx);
+        }
+
+        /// ABI version this plugin was built against.
+        ///
+        /// The host reads this *before* calling `kaadan_register` and refuses to
+        /// load on mismatch, so a stale dylib is rejected rather than having its
+        /// `ScriptContext` reinterpreted at the wrong layout.
+        #[no_mangle]
+        pub extern "C" fn kaadan_abi_version() -> u64 {
+            $crate::ABI_VERSION
         }
     };
 }
