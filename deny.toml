@@ -1,9 +1,34 @@
+# cargo-deny configuration.
+#
+# Schema note: `advisories.vulnerability` and `licenses.unlicensed` were removed
+# upstream — both are now hard errors by default and no longer take a severity.
+# `advisories.unmaintained` changed from a severity ("warn") to a *scope*, which
+# is what broke CI: it only accepts all / workspace / transitive / none. While
+# the config failed to deserialize, cargo-deny bailed out before running a
+# single check, so nothing below was actually being enforced.
+
 [advisories]
-vulnerability = "deny"
-unmaintained = "warn"
+# Flag unmaintained advisories for crates we depend on directly. "all" would also
+# report transitive dependencies, which we do not control closely enough to gate
+# CI on; revisit once the dependency tree settles.
+unmaintained = "workspace"
+
+ignore = [
+    # Both are DoS advisories in `quick-xml`, reachable only through
+    # `wayland-scanner`, a build-time proc-macro that parses the Wayland
+    # protocol XML files vendored inside the crate itself. The XML is never
+    # attacker-controlled and is not parsed at runtime, so neither is
+    # exploitable here.
+    #
+    # We cannot upgrade past the fix line: quick-xml is pinned by
+    # wayland-scanner 0.31 <- smithay-client-toolkit 0.19 <- winit 0.30, and
+    # winit is held at 0.30 by egui-winit 0.30. Revisit when the editor moves
+    # to egui 0.31+/winit 0.31.
+    "RUSTSEC-2026-0194", # quadratic run time checking a start tag for duplicate attrs
+    "RUSTSEC-2026-0195", # unbounded namespace-declaration allocation in NsReader
+]
 
 [licenses]
-unlicensed = "deny"
 allow = [
     "MIT",
     "Apache-2.0",
@@ -16,11 +41,21 @@ allow = [
     "CC0-1.0",
     "BSL-1.0",
     "MPL-2.0",
+    # Font licences, pulled in by `epaint_default_fonts` (egui's bundled fonts).
+    # Both are standard permissive font licences that allow redistribution:
+    # OFL-1.1 is the SIL Open Font License, UFL-1.0 the Ubuntu Font License.
+    "OFL-1.1",
+    "LicenseRef-UFL-1.0",
 ]
 
 [bans]
 multiple-versions = "warn"
 wildcards = "deny"
+# Internal crates are referenced by path (`kaadan_x.workspace = true`) with no
+# version, which the wildcard check counts as a wildcard requirement. Path
+# dependencies inside this workspace are not the supply-chain risk that check
+# exists to catch.
+allow-wildcard-paths = true
 
 [sources]
 unknown-registry = "deny"
