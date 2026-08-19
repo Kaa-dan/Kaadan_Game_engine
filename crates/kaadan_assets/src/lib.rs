@@ -62,7 +62,6 @@ mod tests {
         assert_eq!(storage.len(), 0);
     }
 
-    /// In-memory resolver returning a single PNG for any path.
     struct PngResolver {
         bytes: Vec<u8>,
     }
@@ -152,10 +151,6 @@ mod tests {
         }
     }
 
-    // ----- Test helpers for async / reload / audio -----
-
-    /// Trivial loader that returns the bytes as a UTF-8 string, so reload tests
-    /// can assert exact content with no decode fuzz.
     struct TextLoader;
     impl AssetLoader for TextLoader {
         type Output = String;
@@ -170,7 +165,6 @@ mod tests {
         }
     }
 
-    /// Create a unique temp directory for a test (avoids the `tempfile` dep).
     fn unique_temp_dir(tag: &str) -> std::path::PathBuf {
         let nanos = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)
@@ -181,7 +175,6 @@ mod tests {
         dir
     }
 
-    /// Spin `poll()` until the handle leaves Queued, with bounded retries.
     fn poll_until_settled<T: Send + Sync + 'static>(
         server: &mut AssetServer,
         handle: kaadan_math::Handle<T>,

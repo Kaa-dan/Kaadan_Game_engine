@@ -7,10 +7,6 @@ use std::f32::consts::PI;
 
 const DUMMY_TANGENT: [f32; 4] = [1.0, 0.0, 0.0, 1.0];
 
-/// Emit a triangle with winding chosen so its geometric normal aligns with the
-/// vertices' shading normals — i.e. front-facing (CCW) as seen from outside,
-/// matching the PBR pipeline's back-face culling. Lets generators list indices
-/// in any order without worrying about orientation.
 fn push_tri(vertices: &[Vertex3D], indices: &mut Vec<u32>, a: u32, b: u32, c: u32) {
     let pos = |i: u32| Vec3::from_array(vertices[i as usize].position);
     let nrm = |i: u32| Vec3::from_array(vertices[i as usize].normal);
@@ -177,9 +173,6 @@ pub fn create_plane_mesh(device: &wgpu::Device, half: f32) -> Mesh3DGpu {
     Mesh3DGpu::new(device, &vertices, &indices)
 }
 
-/// Push one ring of `sectors + 1` vertices around the Y axis at height `y`,
-/// with `st`/`ct` the sin/cos of the polar angle (radial vs. vertical split of
-/// the normal). Returns the ring's start index.
 fn push_ring(
     vertices: &mut Vec<Vertex3D>,
     sectors: u32,
@@ -203,7 +196,6 @@ fn push_ring(
     start
 }
 
-/// Connect two vertex rings (each `sectors + 1` wide) with a band of triangles.
 fn bridge_rings(vertices: &[Vertex3D], indices: &mut Vec<u32>, r0: u32, r1: u32, sectors: u32) {
     for j in 0..sectors {
         let a0 = r0 + j;

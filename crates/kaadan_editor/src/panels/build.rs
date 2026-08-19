@@ -1,8 +1,3 @@
-//! Build panel: console-style view of the most recent `cargo build`. Each
-//! diagnostic is a clickable link that loads the referenced file into the
-//! Code panel and scrolls (banner-only, see [`crate::panels::code`]) to the
-//! reported line.
-
 use std::path::PathBuf;
 
 use crate::cargo_build::BuildOutput;
@@ -57,10 +52,6 @@ pub fn show(ui: &mut egui::Ui, build: &mut BuildOutput, code: &mut CodePanelStat
     });
 }
 
-/// Diagnostics from `rustc` typically report paths relative to the package
-/// manifest (e.g. `src/lib.rs`). Anchor those to the gameplay crate root so
-/// the editor opens the right file regardless of CWD. Absolute paths are
-/// returned unchanged.
 fn resolve_diagnostic_path(crate_dir: &std::path::Path, file_name: &str) -> PathBuf {
     let p = PathBuf::from(file_name);
     if p.is_absolute() {

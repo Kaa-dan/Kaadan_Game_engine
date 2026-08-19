@@ -1,20 +1,7 @@
-//! Viewport camera navigation: orbit / pan / zoom, driven by mouse input over
-//! the scene image. Uses non-primary mouse buttons so it never competes with the
-//! primary-button gizmo drag (see [`crate::gizmo`]).
-//!
-//! Bindings (Blender/Unity-ish):
-//! - **Right-drag** → orbit around the target.
-//! - **Middle-drag** → pan (slide eye + target in the view plane).
-//! - **Scroll wheel** → dolly (zoom) toward / away from the target.
-
 use kaadan_renderer::Camera3D;
 
-/// Radians of orbit per screen pixel dragged.
 const ORBIT_SPEED: f32 = 0.008;
-/// Pan world-units per pixel, per unit of camera distance (so panning feels the
-/// same regardless of how far out we're zoomed).
 const PAN_SPEED: f32 = 0.0015;
-/// Dolly fraction of the current distance per scroll unit.
 const ZOOM_SPEED: f32 = 0.0015;
 
 /// Apply one frame of camera navigation from the viewport image `response`.

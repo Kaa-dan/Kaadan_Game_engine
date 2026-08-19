@@ -1,7 +1,3 @@
-//! GameObject spawn requests from the toolbar menu. The menu only records *what*
-//! to spawn; the actual spawn runs in the app loop where the GPU device is
-//! available to build mesh geometry (mirroring the save/load request pattern).
-
 use kaadan_ecs::Entity;
 use kaadan_math::{Color, Transform, Vec3};
 use kaadan_renderer::{DirectionalLight, Mesh3D, PbrMaterial, PointLight};
@@ -25,7 +21,6 @@ pub enum SpawnKind {
 }
 
 impl SpawnKind {
-    /// The primitive mesh this kind spawns, if any (lights/empties have none).
     fn mesh_source(self) -> Option<MeshSource> {
         Some(match self {
             SpawnKind::Cube => MeshSource::Cube { half_extent: 0.5 },

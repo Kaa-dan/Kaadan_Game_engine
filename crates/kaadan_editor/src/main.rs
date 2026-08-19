@@ -1,5 +1,3 @@
-//! KaadanEngine visual editor — a desktop GUI for authoring scenes.
-
 mod app;
 mod camera_controller;
 mod cargo_build;

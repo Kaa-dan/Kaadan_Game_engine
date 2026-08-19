@@ -1,10 +1,3 @@
-//! Builds the editor's panel layout each frame (immediate-mode egui).
-//!
-//! Phase 7 introduces docking via [`egui_dock`]. The top toolbar stays a fixed
-//! [`egui::TopBottomPanel`] (it isn't a dockable surface); everything else —
-//! Hierarchy, Inspector, Viewport, Assets — is a tab inside a single
-//! [`DockArea`] that fills the central panel.
-
 use egui_dock::{DockArea, DockState, Style};
 
 use crate::commands::Command;
@@ -101,8 +94,6 @@ impl<'a> egui_dock::TabViewer for EditorTabViewer<'a> {
     }
 }
 
-/// Global keyboard shortcuts, read once per frame. Skipped while a text field
-/// has focus so typing a name doesn't trigger Delete/gizmo switches.
 fn handle_shortcuts(ctx: &egui::Context, state: &mut EditorState, viewport: &mut Viewport) {
     if ctx.wants_keyboard_input() {
         return;
@@ -158,10 +149,6 @@ fn handle_shortcuts(ctx: &egui::Context, state: &mut EditorState, viewport: &mut
     }
 }
 
-/// Render the offscreen scene texture into this tab and overlay the gizmo.
-/// Pointer coordinates are tab-local (the response/rect come from `ui` here),
-/// so the gizmo math works whether the Viewport tab is the only one or sharing
-/// space with other docked panels.
 fn show_viewport(
     ui: &mut egui::Ui,
     state: &mut EditorState,

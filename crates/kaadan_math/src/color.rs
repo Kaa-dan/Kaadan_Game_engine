@@ -95,7 +95,6 @@ impl Default for Color {
     }
 }
 
-/// sRGB -> Linear conversion (gamma decoding)
 fn srgb_to_linear(c: f32) -> f32 {
     if c <= 0.04045 {
         c / 12.92

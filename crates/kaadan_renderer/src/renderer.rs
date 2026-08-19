@@ -108,11 +108,6 @@ impl Renderer {
         })
     }
 
-    /// Create a wgpu surface from a platform window's raw handles.
-    ///
-    /// SAFETY: the caller must ensure `window` outlives the returned surface.
-    /// In this engine the surface is dropped on suspend/shutdown before the
-    /// window it came from is destroyed.
     fn create_surface(
         instance: &wgpu::Instance,
         window: &(impl HasWindowHandle + HasDisplayHandle + ?Sized),

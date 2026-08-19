@@ -1,17 +1,3 @@
-//! Built-in 8x8 bitmap font — the engine's default, always-available font.
-//!
-//! Text is a Tier-0 requirement for any shippable game (scores, menus, buttons),
-//! but a scalable TrueType path ([`crate::text::FontAtlas`], via `fontdue`)
-//! needs the caller to supply a `.ttf`. This module ships a self-contained
-//! fallback so text works out of the box with **no external asset**: a compact
-//! 8x8 pixel font covering printable ASCII.
-//!
-//! Glyphs are authored as human-readable pixel art (`.` = empty, any other
-//! non-space char = filled) so the source *is* the font, then expanded once at
-//! startup into a white-on-transparent RGBA8 atlas that the UI renderer samples
-//! with per-glyph UVs (the UI shader multiplies texture × vertex color, so a
-//! white glyph tints to any text color).
-
 /// Width of one glyph cell, in pixels.
 pub const GLYPH_W: u32 = 8;
 /// Height of one glyph cell, in pixels.
@@ -33,9 +19,6 @@ pub const ATLAS_W: u32 = ATLAS_COLS * GLYPH_W; // 128
 /// Atlas texture height in pixels.
 pub const ATLAS_H: u32 = ATLAS_ROWS * GLYPH_H; // 48
 
-/// Pixel art for the glyphs we draw. Any codepoint in [`FIRST_GLYPH`,
-/// [`LAST_GLYPH`]] not listed here renders blank (space). Each entry is 8 rows
-/// of up to 8 columns; `.` (and spaces) are empty, anything else is a lit pixel.
 #[rustfmt::skip]
 const GLYPH_ART: &[(char, [&str; 8])] = &[
     ('!', [
@@ -960,7 +943,6 @@ const GLYPH_ART: &[(char, [&str; 8])] = &[
     ]),
 ];
 
-/// Parse one glyph's pixel art into 8 row-bytes (bit `0x80 >> x` = column `x`).
 fn art_to_rows(art: &[&str; 8]) -> [u8; 8] {
     let mut rows = [0u8; 8];
     for (y, line) in art.iter().enumerate() {
@@ -1150,8 +1132,6 @@ mod tests {
         assert_eq!(quads[1].rect.min, Vec2::new(10.0, 28.0));
     }
 
-    /// Renders a sample string to ASCII art so the built-in font can be
-    /// eyeballed for legibility. Run with `--nocapture` to view.
     #[test]
     fn print_sample_text() {
         let sample = "Kaadan 0123 Hi!";

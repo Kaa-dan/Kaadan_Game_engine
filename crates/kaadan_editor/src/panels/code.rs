@@ -1,11 +1,3 @@
-//! Code panel: file tree of the gameplay crate + a syntax-highlighted Rust
-//! editor for the active file. Pairs with the [`Build`](crate::panels::build)
-//! panel which renders cargo diagnostics.
-//!
-//! Phase 8 scope: one active buffer, no multi-file tabs, no LSP, no search.
-//! The crate path is configurable via [`CodePanelState::crate_dir`] (defaults
-//! to `templates/game_template` relative to CWD).
-
 use std::path::{Path, PathBuf};
 
 use egui_code_editor::{CodeEditor, ColorTheme, Syntax};
@@ -96,10 +88,6 @@ impl CodePanelState {
     }
 }
 
-/// Default gameplay-crate path: `<cwd>/templates/game_template`. We resolve
-/// at call time rather than embedding `CARGO_MANIFEST_DIR` so the editor
-/// binary works whether it was launched from the workspace root or a target
-/// directory.
 fn default_gameplay_crate_dir() -> PathBuf {
     std::env::current_dir()
         .unwrap_or_else(|_| PathBuf::from("."))
@@ -211,10 +199,6 @@ pub fn show(ui: &mut egui::Ui, state: &mut CodePanelState, build: &mut BuildOutp
     });
 }
 
-/// Recursive depth-first walk of the gameplay crate's `src/` tree, rendering
-/// each directory as a `CollapsingHeader` and each `.rs` file as a clickable
-/// label. We use `std::fs::read_dir` (no `walkdir` dep) — the gameplay crate
-/// is small, depth is shallow, and avoiding a new dep keeps Cargo.toml lean.
 fn show_dir(ui: &mut egui::Ui, dir: &Path, state: &mut CodePanelState) {
     let Ok(read) = std::fs::read_dir(dir) else {
         ui.label(format!("(unreadable) {}", dir.display()));

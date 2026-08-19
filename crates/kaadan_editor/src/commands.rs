@@ -1,11 +1,3 @@
-//! Undoable editor commands: create / delete / duplicate entities.
-//!
-//! Components carry no reflection, so a command snapshots the *known* component
-//! set (see [`EntitySnapshot`]) — the single enumeration shared by duplication,
-//! deletion, and (later) serialization. Each command is re-runnable: `apply` and
-//! `undo` update the command's own stored entity ids, so redo works even though
-//! hecs assigns fresh ids on re-spawn.
-
 use std::collections::HashMap;
 
 use kaadan_ecs::{Entity, World};
@@ -74,11 +66,8 @@ pub struct SpawnData {
 /// Deletes an entity and its descendants, capturing enough to restore them.
 pub struct DeleteData {
     snapshots: Vec<EntitySnapshot>,
-    /// For each node, the index of its parent within this subtree (if internal).
     parent_local: Vec<Option<usize>>,
-    /// The root's parent, if it lives outside the deleted subtree.
     external_parent: Option<Entity>,
-    /// Live ids: the originals on first apply, refreshed to new ids on undo.
     live_ids: Vec<Entity>,
 }
 
@@ -105,7 +94,6 @@ pub enum Command {
     Reparent(ReparentData),
 }
 
-/// Attach `child` to `parent` (`Some`) or detach it to a root (`None`).
 fn apply_parent(world: &mut World, child: Entity, parent: Option<Entity>) {
     match parent {
         Some(p) if world.is_alive(p) => set_parent(world, child, p),

@@ -1,20 +1,3 @@
-//! Background `cargo build` runner for the integrated code editor.
-//!
-//! Spawns `cargo build -p <package> --message-format=json` on a worker thread
-//! and streams parsed compiler diagnostics back to the UI thread through an
-//! `mpsc` channel. The UI polls the channel each frame (non-blocking) so egui
-//! never stalls waiting for the compiler.
-//!
-//! ## Design
-//!
-//! * One build at a time. While [`BuildOutput::is_running`] is `true`, callers
-//!   should disable the Build button.
-//! * Communication is one-way (worker → UI). We do not support cancellation
-//!   yet — once spawned a build runs to completion. (Trade-off: simpler, and
-//!   `cargo build` on small gameplay crates finishes in seconds.)
-//! * JSON parsing is line-by-line; partial / non-JSON lines are ignored. This
-//!   matches `--message-format=json`'s newline-delimited output.
-
 use std::path::PathBuf;
 use std::process::{Command, Stdio};
 use std::sync::mpsc::{self, Receiver, TryRecvError};
@@ -115,8 +98,6 @@ pub enum BuildEvent {
 pub struct BuildOutput {
     pub status: BuildStatus,
     pub diagnostics: Vec<Diagnostic>,
-    /// Receiver attached to the running worker. `None` when no build is in
-    /// flight (idle / finished). Polling is non-blocking and cheap.
     receiver: Option<Receiver<BuildEvent>>,
 }
 
@@ -195,8 +176,6 @@ impl BuildOutput {
     }
 }
 
-/// Run `cargo build -p <package> --message-format=json`, stream parsed
-/// diagnostics through `tx`, then send a final [`BuildEvent::Finished`].
 fn run_cargo_build(
     package: &str,
     manifest_dir: &std::path::Path,
@@ -256,8 +235,6 @@ fn run_cargo_build(
     let _ = tx.send(BuildEvent::Finished { success });
 }
 
-// ----- JSON parsing -------------------------------------------------------
-
 #[derive(Deserialize)]
 struct CargoMessage {
     reason: String,
@@ -280,8 +257,6 @@ struct RustcSpan {
     line_end: u32,
     column_start: u32,
     column_end: u32,
-    /// `is_primary` lets us prefer the user-visible span when a diagnostic has
-    /// several (e.g. the error site vs the macro definition site).
     #[serde(default)]
     is_primary: bool,
 }
@@ -358,9 +333,6 @@ pub fn parse_cargo_json_line(line: &str) -> Vec<Diagnostic> {
 mod tests {
     use super::*;
 
-    /// A real `cargo build --message-format=json` "compiler-message" line,
-    /// trimmed and slightly redacted for stability. Verifies we extract the
-    /// primary span and ignore the non-primary one.
     #[test]
     fn parses_compiler_message_with_primary_span() {
         let line = r#"{"reason":"compiler-message","package_id":"game_template 0.1.0","manifest_path":"/x/Cargo.toml","target":{"kind":["lib"],"crate_types":["rlib"],"name":"game_template","src_path":"/x/src/lib.rs","edition":"2021","doc":true,"doctest":true,"test":true},"message":{"rendered":"...","children":[],"code":null,"level":"error","message":"cannot find value `foo` in this scope","spans":[{"byte_end":42,"byte_start":39,"column_end":7,"column_start":4,"expansion":null,"file_name":"src/lib.rs","is_primary":true,"label":"not found in this scope","line_end":17,"line_start":17,"suggested_replacement":null,"suggestion_applicability":null,"text":[]},{"byte_end":10,"byte_start":0,"column_end":11,"column_start":1,"expansion":null,"file_name":"src/lib.rs","is_primary":false,"label":"defined here","line_end":1,"line_start":1,"suggested_replacement":null,"suggestion_applicability":null,"text":[]}]}}"#;
@@ -376,8 +348,6 @@ mod tests {
         assert_eq!(d.column_end, 7);
     }
 
-    /// `compiler-artifact` and other non-diagnostic reasons must be dropped,
-    /// and malformed / blank lines must not panic.
     #[test]
     fn ignores_non_compiler_messages_and_garbage() {
         let artifact = r#"{"reason":"compiler-artifact","package_id":"game_template 0.1.0","manifest_path":"/x/Cargo.toml","target":{"kind":["lib"],"crate_types":["rlib"],"name":"game_template","src_path":"/x/src/lib.rs","edition":"2021"},"profile":{"opt_level":"0","debuginfo":2,"debug_assertions":true,"overflow_checks":true,"test":false},"features":[],"filenames":[],"executable":null,"fresh":true}"#;

@@ -1,16 +1,3 @@
-//! Bridge between the serializable [`Scene`] and a live ECS [`World`].
-//!
-//! [`Scene::spawn_into`] instantiates a scene's entities (transforms, names,
-//! tags, and parent/child hierarchy) into a world; [`Scene::from_world`]
-//! extracts a world's root entities back into a serializable scene. Together
-//! they let the runtime load a `.ron` scene, run it, and save it back — the
-//! same on-disk format the editor authors.
-//!
-//! This bridges the components `kaadan_scene` owns: [`Transform`], [`Name`],
-//! [`Tags`], and the hierarchy ([`Parent`]/[`Children`]). Renderer-specific
-//! components (sprites, meshes, materials, lights) are asset-backed and handled
-//! by the editor's richer scene format; unifying the two is a separate step.
-
 use kaadan_ecs::{Entity, World};
 use kaadan_math::{Quat, Transform, Vec3};
 
@@ -135,8 +122,6 @@ fn extract_desc(world: &World, entity: Entity) -> EntityDesc {
 mod tests {
     use super::*;
 
-    /// A parent + child scene round-trips World -> Scene -> World with names,
-    /// transforms, tags, and hierarchy preserved.
     #[test]
     fn world_scene_world_roundtrip() {
         let mut world = World::new();
@@ -177,8 +162,6 @@ mod tests {
         assert_eq!(world2.get::<Parent>(kids[0]).unwrap().0, new_parent);
     }
 
-    /// A scene loaded via RON then spawned produces the right entities — proves
-    /// the on-disk format and the bridge line up.
     #[test]
     fn ron_scene_spawns_into_world() {
         let scene = Scene {

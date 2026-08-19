@@ -1,5 +1,3 @@
-//! Hierarchy panel: a tree of all entities, plus create/delete/duplicate actions.
-
 use kaadan_ecs::{Entity, World};
 use kaadan_renderer::{DirectionalLight, Mesh3D, PointLight, Sprite};
 use kaadan_scene::{Children, Parent};
@@ -121,7 +119,6 @@ pub fn show(ui: &mut egui::Ui, world: &mut World, state: &mut EditorState) {
     }
 }
 
-/// Walk roots (entities without a `Parent`) depth-first through `Children`.
 fn collect(world: &World) -> Vec<Row> {
     let mut roots: Vec<Entity> = world
         .inner()

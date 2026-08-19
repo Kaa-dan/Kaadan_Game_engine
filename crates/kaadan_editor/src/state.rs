@@ -1,5 +1,3 @@
-//! Editor-wide state shared across panels. Grows as milestones land.
-
 use egui_dock::{DockState, NodeIndex};
 use kaadan_ecs::Entity;
 use kaadan_renderer::{DirectionalLight, Mesh3D, PbrMaterial, PointLight, Sprite};

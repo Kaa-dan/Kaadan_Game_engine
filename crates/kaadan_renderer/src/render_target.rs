@@ -1,6 +1,3 @@
-//! Offscreen color + depth render target. Lets callers draw the scene into a
-//! texture (e.g. an editor viewport panel) instead of the window surface.
-
 const DEPTH_FORMAT: wgpu::TextureFormat = wgpu::TextureFormat::Depth32Float;
 
 pub struct RenderTarget {

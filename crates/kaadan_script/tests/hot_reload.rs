@@ -1,18 +1,3 @@
-//! End-to-end hot-reload test.
-//!
-//! This builds the `game_template` cdylib with `cargo`, loads it through a
-//! [`ScriptHost`], and verifies the plugin's `Spinner` behaviour actually runs
-//! and rotates the `Mesh3D` + `Transform` entity it is attached to.
-//!
-//! It is `#[ignore]`d because building a crate from inside a test is slow and
-//! fragile (it shells out to `cargo`, depends on the workspace layout, and
-//! contends for the target dir). CI runs the *static-link* equivalent in
-//! `templates/game_template` instead. Run this manually with:
-//!
-//! ```sh
-//! cargo test -p kaadan_script -- --ignored
-//! ```
-
 #![cfg(feature = "hot_reload")]
 
 use std::path::PathBuf;
@@ -24,7 +9,6 @@ use kaadan_math::{HandleAllocator, Quat, Transform};
 use kaadan_renderer::{Mesh3D, Mesh3DGpu};
 use kaadan_script::{BehaviourRegistry, ScriptComponent, ScriptHost};
 
-/// Platform-specific cdylib file name for `game_template`.
 fn cdylib_name() -> &'static str {
     if cfg!(target_os = "windows") {
         "game_template.dll"
@@ -35,7 +19,6 @@ fn cdylib_name() -> &'static str {
     }
 }
 
-/// Workspace root = two levels up from this crate's manifest dir.
 fn workspace_root() -> PathBuf {
     PathBuf::from(env!("CARGO_MANIFEST_DIR"))
         .parent()

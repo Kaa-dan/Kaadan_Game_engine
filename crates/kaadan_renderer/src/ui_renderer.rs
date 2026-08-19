@@ -14,7 +14,6 @@ pub struct UiQuad {
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
 struct UiVertex {
-    /// Position in pixels (top-left origin, y-down).
     position: [f32; 2],
     uv: [f32; 2],
     color: [f32; 4],
@@ -93,12 +92,9 @@ pub struct UiRenderer {
     index_buffer: wgpu::Buffer,
     vertex_capacity: u64,
     index_capacity: u64,
-    /// Built-in 1x1 white texture used when the caller passes `texture: None`.
     white_texture: Texture,
     white_bind_group: wgpu::BindGroup,
-    /// Whether the 1x1 white pixel still needs its one-time GPU upload.
     white_uploaded: bool,
-    /// Scratch buffers reused each frame to avoid per-frame allocation.
     vertices: Vec<UiVertex>,
     indices: Vec<u32>,
 }
@@ -261,9 +257,6 @@ impl UiRenderer {
         })
     }
 
-    /// Allocate the built-in 1x1 white texture. The single white pixel is
-    /// uploaded lazily on the first [`render`](Self::render) call (which has a
-    /// queue), since the constructor only has a device.
     fn create_white_texture(device: &wgpu::Device) -> Texture {
         let texture = device.create_texture(&wgpu::TextureDescriptor {
             label: Some("ui_white_texture"),

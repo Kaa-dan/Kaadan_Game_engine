@@ -151,7 +151,6 @@ impl SpriteBatch {
     }
 }
 
-/// Quad corner fractions (bottom-left, bottom-right, top-right, top-left).
 const CORNERS: [Vec2; 4] = [
     Vec2::new(0.0, 0.0),
     Vec2::new(1.0, 0.0),
@@ -159,7 +158,6 @@ const CORNERS: [Vec2; 4] = [
     Vec2::new(0.0, 1.0),
 ];
 
-/// World-space corners of a sprite quad plus its XY AABB.
 fn quad_corners(transform: &Transform, size: Vec2, anchor: Vec2) -> ([[f32; 3]; 4], Vec2, Vec2) {
     let matrix = transform.to_matrix();
     let mut positions = [[0.0_f32; 3]; 4];
@@ -176,7 +174,6 @@ fn quad_corners(transform: &Transform, size: Vec2, anchor: Vec2) -> ([[f32; 3]; 
     (positions, min, max)
 }
 
-/// UVs matching [`CORNERS`], honoring atlas region and flip flags.
 fn quad_uvs(sprite: &Sprite) -> [[f32; 2]; 4] {
     let (mut u_min, mut v_min, mut u_max, mut v_max) = match sprite.region {
         Some(r) => (r.uv_min.x, r.uv_min.y, r.uv_max.x, r.uv_max.y),

@@ -33,7 +33,6 @@ pub struct GltfImageData {
     pub height: u32,
 }
 
-/// Convert a glTF image (any supported pixel format) to packed RGBA8.
 fn to_rgba8(image: &gltf::image::Data) -> GltfImageData {
     use gltf::image::Format;
     let px = &image.pixels;

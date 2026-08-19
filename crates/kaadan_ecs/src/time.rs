@@ -1,7 +1,5 @@
 use std::time::{Duration, Instant};
 
-/// Largest delta applied in a single frame. Clamping prevents the fixed-update
-/// "spiral of death" after a long stall (e.g. the app was suspended).
 const MAX_DELTA: Duration = Duration::from_millis(250);
 
 /// Frame timing resource — inserted by [`App`](crate::App), updated each frame.

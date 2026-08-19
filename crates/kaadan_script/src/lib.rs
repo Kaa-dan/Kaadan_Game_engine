@@ -14,8 +14,7 @@
 //!   Compile this crate with `--no-default-features` for that target.
 //!
 //! The seam between the two is the exported `kaadan_register` symbol, generated
-//! by the [`kaadan_game!`] macro. See `docs/scripting/abi.md` for the full ABI
-//! and safety contract.
+//! by the [`kaadan_game!`] macro.
 
 mod behaviour;
 mod context;
@@ -33,7 +32,7 @@ mod registry;
 /// toolchain drift — two builds from the same source with different `rustc`
 /// versions still report the same ABI version while having different layouts,
 /// because Rust has no stable ABI. Building host and plugin from one workspace
-/// in one cargo invocation remains the actual contract (`docs/scripting/abi.md`).
+/// in one cargo invocation remains the actual contract.
 pub const ABI_VERSION: u64 = 1;
 
 pub use behaviour::{

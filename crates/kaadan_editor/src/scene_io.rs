@@ -1,8 +1,3 @@
-//! Editor scene file format (RON). Captures the editor-known components plus
-//! *asset sources* so procedural assets (a generated checkerboard, a code-built
-//! cube) round-trip without needing files on disk. `File`/`Gltf` variants are the
-//! Unity-style asset references for when a real import pipeline lands.
-
 use std::path::PathBuf;
 
 use serde::{Deserialize, Serialize};

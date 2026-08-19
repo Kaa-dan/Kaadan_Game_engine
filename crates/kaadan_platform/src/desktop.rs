@@ -11,7 +11,6 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use crate::input_event::*;
 use crate::platform::{AppHandler, PlatformWindow, WindowConfig};
 
-/// Wrapper around a winit Window that implements PlatformWindow.
 struct DesktopWindow {
     window: Arc<Window>,
 }

@@ -34,7 +34,6 @@ impl Stage {
     ];
 }
 
-/// Named system for debugging and ordering.
 struct SystemEntry {
     name: String,
     system: SystemFn,

@@ -1,6 +1,3 @@
-//! Dedicated winit event loop for the editor. Unlike `kaadan_app::Engine`, this
-//! owns the raw `Window` and `WindowEvent`s so egui-winit can consume them.
-
 use std::sync::Arc;
 
 use egui_wgpu::ScreenDescriptor;
@@ -14,7 +11,6 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use crate::state::EditorState;
 use crate::viewport::Viewport;
 
-/// GPU + egui state, created once the window exists on `resumed`.
 struct Gfx {
     window: Arc<Window>,
     renderer: Renderer,
@@ -22,7 +18,6 @@ struct Gfx {
     egui_state: egui_winit::State,
     egui_renderer: egui_wgpu::Renderer,
     viewport: Viewport,
-    /// egui handle to the viewport's offscreen color texture.
     viewport_tex: Option<egui::TextureId>,
 }
 
@@ -133,8 +128,6 @@ impl ApplicationHandler for EditorApp {
     }
 }
 
-/// Translate a winit physical key into the engine's [`KeyCode`]. Only the keys
-/// gameplay commonly reads are mapped; everything else returns `None`.
 fn translate_key(code: winit::keyboard::KeyCode) -> Option<kaadan_platform::KeyCode> {
     use kaadan_platform::KeyCode as K;
     use winit::keyboard::KeyCode as W;

@@ -1,16 +1,3 @@
-//! Play mode: runs the real gameplay runtime against the editor's scene.
-//!
-//! Pressing Play builds a [`PlaySession`] that owns a runtime [`App`] and a
-//! [`ScriptHost`] pointed at the gameplay crate's built cdylib. The session
-//! loads the plugin — which attaches Unity-style behaviours to the scene's
-//! entities — and then ticks it each frame, hot-reloading the dylib whenever a
-//! rebuild lands. Stop drops the session and restores the pre-play snapshot.
-//!
-//! The scene world lives in the editor's [`Viewport`](crate::viewport::Viewport)
-//! so all the panels/gizmos keep operating on it. The session borrows that world
-//! by swapping it into its `App` only for the duration of `load`/`tick`, then
-//! swaps it back — the world is never copied and the panels never see it move.
-
 use std::path::{Path, PathBuf};
 
 use kaadan_ecs::{App, Entity, World};
@@ -145,9 +132,6 @@ impl PlaySession {
     }
 }
 
-/// Attach a [`ScriptComponent`] to each entity for every behaviour name in its
-/// [`Scripts`] component, constructing behaviours from the plugin's
-/// [`BehaviourRegistry`]. Unknown names are logged and skipped.
 fn attach_scripts(app: &mut App) {
     let targets: Vec<(Entity, Vec<String>)> = app
         .world
@@ -210,12 +194,6 @@ pub fn probe_behaviour_names(crate_dir: &Path) -> Vec<String> {
     names
 }
 
-/// Resolve the built cdylib path for the gameplay crate at `crate_dir`.
-///
-/// Mirrors cargo's default layout: `<workspace>/target/debug/<platform-name>`,
-/// where the workspace root is the crate dir's grandparent (crate lives at
-/// `<workspace>/templates/<pkg>`) and the file name is the platform's cdylib
-/// convention for the package name.
 fn game_dylib_path(crate_dir: &Path) -> Option<PathBuf> {
     let package = crate_dir.file_name()?.to_str()?;
     let workspace_root = crate_dir.parent()?.parent()?;
@@ -245,9 +223,6 @@ mod tests {
         );
     }
 
-    /// With no gameplay dylib present the session starts host-less, and the
-    /// world-swap round-trip in `start`/`tick` leaves the caller's world intact
-    /// (entities preserved, world handed back). Guards the `mem::swap` logic.
     #[test]
     fn session_preserves_world_without_dylib() {
         use kaadan_math::Transform;

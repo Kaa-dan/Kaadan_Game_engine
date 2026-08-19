@@ -7,20 +7,10 @@ use libloading::{Library, Symbol};
 use crate::behaviour::{clear_all_behaviours, BehaviourRegistry};
 use crate::context::ScriptContext;
 
-/// The exported symbol every gameplay plugin must provide. See `kaadan_game!`.
 const REGISTER_SYMBOL: &[u8] = b"kaadan_register";
 
-/// Symbol carrying the plugin's [`crate::ABI_VERSION`], checked before any call
-/// across the boundary.
 const ABI_SYMBOL: &[u8] = b"kaadan_abi_version";
 
-/// How settled a rebuilt dylib must be before we load it.
-///
-/// `cargo` writes the dylib incrementally and the mtime bumps as soon as the
-/// linker touches the file, so reloading the instant we notice a change can
-/// `dlopen` a truncated image. Requiring the mtime to be at least this old means
-/// we observe the file only after writing has stopped, without blocking the
-/// frame on a sleep — a poll that is too early simply returns and retries.
 const RELOAD_SETTLE: std::time::Duration = std::time::Duration::from_millis(150);
 
 /// Errors raised while loading or reloading a gameplay plugin.
@@ -48,7 +38,6 @@ pub enum ScriptError {
     AbiMismatch { host: u64, plugin: u64 },
 }
 
-/// Signature of the exported registration entry point.
 type RegisterFn = unsafe extern "C" fn(&mut ScriptContext);
 
 /// Loads a gameplay cdylib at runtime and supports hot-reload.
@@ -59,16 +48,10 @@ type RegisterFn = unsafe extern "C" fn(&mut ScriptContext);
 /// library, then loads the fresh build and re-registers — so game state (the
 /// world, resources) survives the reload while code is swapped.
 pub struct ScriptHost {
-    /// Path to the on-disk plugin built by `cargo` (watched for changes).
     path: PathBuf,
-    /// The currently loaded library (a *copy* of `path`); kept alive so its
-    /// code/`fn` pointers remain valid for as long as its systems are scheduled.
     lib: Option<Library>,
-    /// Path of the temp copy currently loaded, deleted on reload/drop.
     loaded_copy: Option<PathBuf>,
-    /// Names of systems registered by the loaded plugin (for removal on reload).
     plugin_systems: Vec<String>,
-    /// mtime of `path` at the moment we last loaded; drives [`poll`](Self::poll).
     last_modified: Option<SystemTime>,
 }
 
@@ -274,8 +257,6 @@ impl Drop for ScriptHost {
     }
 }
 
-/// Build a process-unique sibling path for the temp copy of `path`,
-/// e.g. `libgame.dylib` -> `libgame.<pid>.<nanos>.dylib`.
 fn unique_copy_path(path: &Path) -> PathBuf {
     let nanos = SystemTime::now()
         .duration_since(SystemTime::UNIX_EPOCH)
@@ -300,9 +281,6 @@ fn unique_copy_path(path: &Path) -> PathBuf {
 mod tests {
     use super::*;
 
-    /// A file that is not a loadable library must fail cleanly *and* leave no
-    /// temp copy behind. The copy lives next to the source, so a leak here
-    /// would litter `target/` on every failed build.
     #[test]
     fn failed_load_cleans_up_its_temp_copy() {
         let dir = std::env::temp_dir().join(format!("kaadan_abi_test_{}", std::process::id()));
@@ -333,7 +311,6 @@ mod tests {
         let _ = std::fs::remove_dir_all(&dir);
     }
 
-    /// A missing source dylib is an `Io` error, not a panic.
     #[test]
     fn missing_dylib_is_an_error() {
         let mut app = App::new();
@@ -341,8 +318,6 @@ mod tests {
         assert!(matches!(host.load(&mut app), Err(ScriptError::Io(_))));
     }
 
-    /// `poll` on a host that was never loaded (and whose path does not exist)
-    /// must be a quiet no-op rather than tearing anything down.
     #[test]
     fn poll_without_a_dylib_is_a_noop() {
         let mut app = App::new();
@@ -350,9 +325,6 @@ mod tests {
         assert!(!host.poll(&mut app));
     }
 
-    /// A freshly written file is inside the settle window, so `poll` must defer
-    /// rather than loading a possibly half-written image — and must *not* record
-    /// the mtime, so the next poll still sees the change.
     #[test]
     fn poll_defers_while_the_dylib_is_still_settling() {
         let dir = std::env::temp_dir().join(format!("kaadan_settle_test_{}", std::process::id()));

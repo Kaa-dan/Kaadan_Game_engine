@@ -16,27 +16,20 @@ use kaadan_ui::{UiNode, UiProgressBar, UiText};
 use crate::frame_pacer::{FramePacer, FrameStats};
 use crate::lifecycle::LifecycleManager;
 
-/// How gameplay code is supplied to the engine.
 enum GameSource {
-    /// Statically linked: `register` is called once at init (mobile / shipping,
-    /// and any build compiled with gameplay in-tree).
     Static(fn(&mut ScriptContext)),
-    /// Hot-reloadable: a `ScriptHost` watches a built cdylib and reloads it when
-    /// it changes (desktop development).
     #[cfg(feature = "hot_reload")]
     Host(ScriptHost),
 }
 
 type InitCallback = Box<dyn FnOnce(&mut EngineSetup)>;
 
-/// GPU-side state, created once the window/surface exists.
 struct RenderCtx {
     renderer: Renderer,
     sprite: SpriteRenderer,
     sprite_batch: SpriteBatch,
     pbr: PbrRenderer,
     ui: UiRenderer,
-    /// Built-in bitmap-font glyph atlas, sampled when drawing `UiText`.
     font_atlas: Texture,
     textures: HashMap<Handle<Texture>, Texture>,
     texture_alloc: HandleAllocator<Texture>,
@@ -157,8 +150,6 @@ pub struct Engine {
     should_exit: bool,
     clear_color: Color,
     on_init: Option<InitCallback>,
-    /// Optional gameplay plugin, loaded after `on_init` so its registration sees
-    /// any entities the init callback spawned.
     game: Option<GameSource>,
 }
 
@@ -464,10 +455,6 @@ impl AppHandler for Engine {
     }
 }
 
-/// Build screen-space UI quads from the world: node backgrounds (with a small
-/// hover/press tint for interactive nodes) and progress-bar track + fill.
-/// Text glyphs are not drawn yet (pending a bundled font). All quads sample the
-/// `UiRenderer`'s built-in white texture, so `uv` is the full 0..1 range.
 fn collect_ui_quads(world: &World) -> Vec<UiQuad> {
     use kaadan_ui::InteractionState;
     let full_uv = Rect::new(Vec2::ZERO, Vec2::ONE);
@@ -521,10 +508,6 @@ fn collect_ui_quads(world: &World) -> Vec<UiQuad> {
     quads
 }
 
-/// Build glyph quads for every `UiText` that is paired with a `UiNode`, anchored
-/// at the node's computed top-left. Quads sample the font atlas and are tinted by
-/// the text color. Returned separately from [`collect_ui_quads`] because they
-/// bind a different texture (a second UI draw call).
 fn collect_text_quads(world: &World) -> Vec<UiQuad> {
     let mut quads = Vec::new();
     for (_e, (node, text)) in world.query::<(&UiNode, &UiText)>().iter() {

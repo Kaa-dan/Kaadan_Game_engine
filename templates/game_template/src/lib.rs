@@ -10,16 +10,7 @@
 //! The [`kaadan_game!`] macro at the bottom exports the `kaadan_register`
 //! symbol the host resolves; [`build`] is the single registration entry point.
 //!
-//! # Writing & attaching scripts (the editor loop)
-//!
-//! 1. Define a struct and `impl Behaviour` for it (`start`/`update`), like
-//!    [`Spinner`] or [`Player`] below.
-//! 2. Register it **by name** in [`build`] with `register_behaviour_default`.
-//! 3. In the editor: **Code ▸ Build**, then select an entity and use the
-//!    Inspector's **Scripts ▸ Add behaviour** dropdown (press ↻ after building)
-//!    to attach it by name. Press **▶ Play** to run it.
-//!
-//! Attachment is **data-driven**: the editor stores which behaviours an entity
+//! Attachment is data-driven: the editor stores which behaviours an entity
 //! carries and attaches them on Play. `build` therefore only *registers*
 //! behaviours — it must not attach them itself.
 
@@ -28,15 +19,8 @@ use kaadan_math::{Quat, Transform, Vec3};
 use kaadan_platform::KeyCode;
 use kaadan_script::{kaadan_game, Behaviour, BehaviourContext, ScriptContext};
 
-/// A Unity-like behaviour that spins its own entity around the Y axis.
-///
-/// State lives on the behaviour instance (`speed`), demonstrating that a
-/// behaviour is a plain stateful object. Note that this instance state is reset
-/// on hot-reload (a fresh `Spinner` is attached) — durable state belongs in
-/// ordinary components.
 #[derive(Default)]
 struct Spinner {
-    /// Angular speed in radians/second.
     speed: f32,
 }
 
@@ -57,11 +41,7 @@ impl Behaviour for Spinner {
     }
 }
 
-/// A WASD/arrow-key character controller. Reads the shared [`InputState`] and
-/// translates its own entity on the XZ plane. Attach this to an entity and press
-/// Play, then drive it with the keyboard.
 struct Player {
-    /// Movement speed in world units/second.
     speed: f32,
 }
 
@@ -131,8 +111,6 @@ mod tests {
         ))
     }
 
-    /// Attach a registered behaviour by name (mirrors what the editor does on
-    /// Play): look it up in the `BehaviourRegistry` and insert a component.
     fn attach(app: &mut App, entity: Entity, name: &str) {
         let behaviour = app
             .resources
@@ -153,8 +131,6 @@ mod tests {
         app.tick();
     }
 
-    /// STATIC-LINK path: register `build` directly, attach a Spinner by name, and
-    /// confirm the driver runs it and rotates the mesh.
     #[test]
     fn spinner_registers_and_runs() {
         let mut app = App::new();
@@ -177,7 +153,6 @@ mod tests {
         assert_ne!(rot, Quat::IDENTITY, "Spinner should have rotated the mesh");
     }
 
-    /// The `Player` behaviour moves its entity while a movement key is held.
     #[test]
     fn player_moves_with_input() {
         let mut app = App::new();
@@ -207,8 +182,6 @@ mod tests {
         );
     }
 
-    /// `build` is idempotent across a simulated hot-reload: re-registering the
-    /// factories does not error and the names remain constructible.
     #[test]
     fn build_is_idempotent_across_reload() {
         let mut app = App::new();

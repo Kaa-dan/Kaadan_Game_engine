@@ -1,10 +1,3 @@
-//! Minimal double-buffered event queue.
-//!
-//! Store an `Events<T>` as a resource, `send` into it from any system, and
-//! `iter` it from readers. Call [`Events::update`] once per frame (typically in
-//! [`Stage::First`](crate::Stage::First)) so events stay readable for the frame
-//! they were sent plus the next one, then are dropped.
-
 /// A double-buffered queue of events of type `T`.
 pub struct Events<T> {
     buffers: [Vec<T>; 2],

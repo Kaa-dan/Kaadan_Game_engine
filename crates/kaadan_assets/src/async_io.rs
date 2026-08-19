@@ -1,12 +1,3 @@
-//! Background loading worker used by [`crate::AssetServer::load_async`].
-//!
-//! A single dedicated worker thread reads bytes via the (shared, `Send + Sync`)
-//! resolver and runs the type-specific loader off the caller's thread. Each job
-//! produces a type-erased [`Completed`] closure that, when applied on the main
-//! thread inside `poll`, routes the finished asset (or failure) into the
-//! correct typed storage. Capturing the typed work in the closure keeps the
-//! channel itself fully type-erased.
-
 use std::sync::mpsc::{Receiver, Sender};
 use std::thread::JoinHandle;
 

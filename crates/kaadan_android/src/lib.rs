@@ -1,17 +1,10 @@
 //! Android entry point for a KaadanEngine game.
 //!
 //! `android_main` is the symbol the `android-activity` native-activity glue
-//! calls once the Android `NativeActivity` starts. It builds an [`Engine`],
-//! spawns a minimal 3D scene (a lit cube), statically links the gameplay crate
-//! ([`game_template`], which attaches a `Spinner` behaviour to mesh entities),
-//! and hands control to the Android platform backend.
+//! calls once the Android `NativeActivity` starts. It uses the static-link
+//! gameplay path (`with_static_game`); there is no dylib hot-reload on mobile.
 //!
-//! This uses the **static-link** gameplay path (`with_static_game`) — the
-//! shipping model for mobile, with no dylib hot-reload (iOS forbids it and it is
-//! unnecessary on a device).
-//!
-//! On non-Android targets this crate is an empty library so it can participate
-//! in the desktop `cargo build --workspace` and catch breakage early.
+//! On non-Android targets this crate is an empty library.
 
 #[cfg(target_os = "android")]
 use kaadan_app::Engine;

@@ -1,5 +1,3 @@
-//! Top toolbar / menu bar.
-
 use kaadan_ecs::World;
 
 use crate::gizmo::GizmoMode;
