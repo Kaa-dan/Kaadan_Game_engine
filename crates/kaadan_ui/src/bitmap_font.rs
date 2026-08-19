@@ -1047,7 +1047,10 @@ pub fn layout_text(
         if glyph_rows(c).is_some() {
             if let Some((u0, v0, u1, v1)) = glyph_uv(c) {
                 quads.push(GlyphQuad {
-                    rect: Rect::new(cursor, Vec2::new(cursor.x + advance, cursor.y + line_height)),
+                    rect: Rect::new(
+                        cursor,
+                        Vec2::new(cursor.x + advance, cursor.y + line_height),
+                    ),
                     uv: Rect::new(Vec2::new(u0, v0), Vec2::new(u1, v1)),
                     color,
                 });
@@ -1100,7 +1103,7 @@ mod tests {
     #[test]
     fn printable_ascii_maps_into_grid() {
         assert_eq!(glyph_index(' '), Some(0));
-        assert_eq!(glyph_index('A'), Some(('A' as u8 - FIRST_GLYPH) as usize));
+        assert_eq!(glyph_index('A'), Some((b'A' - FIRST_GLYPH) as usize));
         assert_eq!(glyph_index('~'), Some(94));
         assert_eq!(glyph_index('\n'), None);
         // Every glyph's UV stays within [0, 1].

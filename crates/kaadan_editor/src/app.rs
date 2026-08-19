@@ -96,10 +96,12 @@ impl ApplicationHandler for EditorApp {
                 if let Some(key) = translate_key(code) {
                     self.state
                         .pending_input
-                        .push(kaadan_platform::InputEvent::Key(kaadan_platform::KeyEvent {
-                            key,
-                            pressed: ke.state.is_pressed(),
-                        }));
+                        .push(kaadan_platform::InputEvent::Key(
+                            kaadan_platform::KeyEvent {
+                                key,
+                                pressed: ke.state.is_pressed(),
+                            },
+                        ));
                 }
             }
         }
@@ -261,10 +263,15 @@ impl Gfx {
                     state.playing = true;
                 }
                 crate::play::PlayRequest::Stop => {
-                    // Drop the runtime (unloads the dylib) before restoring the
-                    // snapshot, which despawns the play world including any
-                    // attached behaviour components.
-                    state.play_session = None;
+                    // Tear the session down through `stop`, which clears the
+                    // behaviour components out of the *editor's* world before
+                    // unloading the dylib. Their vtables and drop glue live in
+                    // the plugin's code segment, so simply dropping the session
+                    // here would unmap that code while the components are still
+                    // alive in `self.viewport.world`.
+                    if let Some(session) = state.play_session.take() {
+                        session.stop(&mut self.viewport.world);
+                    }
                     if let Some(scene) = state.play_snapshot.take() {
                         self.viewport.apply_scene(
                             &self.renderer.device,

@@ -4,6 +4,7 @@ version.workspace = true
 edition.workspace = true
 license.workspace = true
 rust-version.workspace = true
+publish.workspace = true
 description = "Linear algebra and math utilities for KaadanEngine"
 
 [lints]

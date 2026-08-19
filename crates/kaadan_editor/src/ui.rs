@@ -134,7 +134,9 @@ fn handle_shortcuts(ctx: &egui::Context, state: &mut EditorState, viewport: &mut
     if delete {
         if let Some(sel) = state.selected.filter(|&e| viewport.world.is_alive(e)) {
             let cmd = Command::delete(&viewport.world, sel);
-            state.commands.run(&mut viewport.world, &mut state.selected, cmd);
+            state
+                .commands
+                .run(&mut viewport.world, &mut state.selected, cmd);
         }
     }
     if undo {
@@ -213,11 +215,7 @@ fn show_viewport(
             // drag ends.
             if response.drag_stopped() {
                 if let Some((e, before)) = state.xform_edit.take() {
-                    if let Ok(after) = viewport
-                        .world
-                        .get::<kaadan_math::Transform>(e)
-                        .map(|t| *t)
-                    {
+                    if let Ok(after) = viewport.world.get::<kaadan_math::Transform>(e).map(|t| *t) {
                         if after != before {
                             state.commands.run(
                                 &mut viewport.world,

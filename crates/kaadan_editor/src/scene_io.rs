@@ -23,12 +23,22 @@ pub enum IoRequest {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Eq, Debug)]
 pub enum TextureSource {
-    Checker { size: u32, cells: u32 },
-    Solid { rgba: [u8; 4] },
-    File { path: String },
+    Checker {
+        size: u32,
+        cells: u32,
+    },
+    Solid {
+        rgba: [u8; 4],
+    },
+    File {
+        path: String,
+    },
     /// An embedded image from an imported glTF/`.glb` file, referenced by the
     /// source path + image index so it round-trips without a separate file.
-    GltfImage { path: String, image_index: usize },
+    GltfImage {
+        path: String,
+        image_index: usize,
+    },
 }
 
 impl TextureSource {
@@ -46,14 +56,29 @@ impl TextureSource {
 
 #[derive(Serialize, Deserialize, Clone, PartialEq, Debug)]
 pub enum MeshSource {
-    Cube { half_extent: f32 },
-    Sphere { radius: f32 },
-    Plane { half_extent: f32 },
-    Cylinder { radius: f32, half_height: f32 },
-    Capsule { radius: f32, half_height: f32 },
+    Cube {
+        half_extent: f32,
+    },
+    Sphere {
+        radius: f32,
+    },
+    Plane {
+        half_extent: f32,
+    },
+    Cylinder {
+        radius: f32,
+        half_height: f32,
+    },
+    Capsule {
+        radius: f32,
+        half_height: f32,
+    },
     /// A submesh of an imported glTF/`.glb` file. `mesh_index` selects which
     /// primitive of the file this entity draws.
-    Gltf { path: String, mesh_index: usize },
+    Gltf {
+        path: String,
+        mesh_index: usize,
+    },
 }
 
 impl MeshSource {

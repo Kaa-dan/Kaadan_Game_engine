@@ -10,6 +10,19 @@ use crate::context::ScriptContext;
 /// The exported symbol every gameplay plugin must provide. See `kaadan_game!`.
 const REGISTER_SYMBOL: &[u8] = b"kaadan_register";
 
+/// Symbol carrying the plugin's [`crate::ABI_VERSION`], checked before any call
+/// across the boundary.
+const ABI_SYMBOL: &[u8] = b"kaadan_abi_version";
+
+/// How settled a rebuilt dylib must be before we load it.
+///
+/// `cargo` writes the dylib incrementally and the mtime bumps as soon as the
+/// linker touches the file, so reloading the instant we notice a change can
+/// `dlopen` a truncated image. Requiring the mtime to be at least this old means
+/// we observe the file only after writing has stopped, without blocking the
+/// frame on a sleep — a poll that is too early simply returns and retries.
+const RELOAD_SETTLE: std::time::Duration = std::time::Duration::from_millis(150);
+
 /// Errors raised while loading or reloading a gameplay plugin.
 #[derive(Debug, thiserror::Error)]
 pub enum ScriptError {
@@ -21,6 +34,18 @@ pub enum ScriptError {
 
     #[error("plugin is missing the `kaadan_register` symbol: {0}")]
     MissingSymbol(libloading::Error),
+
+    #[error(
+        "plugin is missing the `kaadan_abi_version` symbol ({0}); \
+         rebuild it against the current kaadan_script (use the `kaadan_game!` macro)"
+    )]
+    MissingAbiSymbol(libloading::Error),
+
+    #[error(
+        "plugin ABI mismatch: host expects {host}, plugin reports {plugin}; \
+         rebuild the gameplay crate (stale artifact in target/?)"
+    )]
+    AbiMismatch { host: u64, plugin: u64 },
 }
 
 /// Signature of the exported registration entry point.
@@ -95,16 +120,53 @@ impl ScriptHost {
             ScriptError::Load(e)
         })?;
 
+        // Check the ABI version BEFORE handing the plugin a `&mut ScriptContext`.
+        // This is the one call we can make whose signature (`fn() -> u64`) is
+        // layout-independent, so it is safe to make even against a plugin that
+        // disagrees with us about everything else.
+        //
+        // SAFETY: `kaadan_abi_version` is emitted by `kaadan_game!` with exactly
+        // this signature and touches no shared types. The `Symbol` borrows `lib`
+        // and is called immediately while `lib` is alive.
+        let abi_check = unsafe {
+            lib.get::<unsafe extern "C" fn() -> u64>(ABI_SYMBOL)
+                .map_err(ScriptError::MissingAbiSymbol)
+                .map(|f| f())
+        };
+        let abi = match abi_check {
+            Ok(v) if v == crate::ABI_VERSION => v,
+            Ok(v) => {
+                drop(lib);
+                let _ = std::fs::remove_file(&copy_path);
+                return Err(ScriptError::AbiMismatch {
+                    host: crate::ABI_VERSION,
+                    plugin: v,
+                });
+            }
+            Err(e) => {
+                drop(lib);
+                let _ = std::fs::remove_file(&copy_path);
+                return Err(e);
+            }
+        };
+        debug_assert_eq!(abi, crate::ABI_VERSION);
+
         // SAFETY: the plugin exports `kaadan_register` with exactly this
         // `extern "C" fn(&mut ScriptContext)` signature via the `kaadan_game!`
         // macro. Same-toolchain + same-deps guarantees `ScriptContext` has an
-        // identical layout on both sides, so the call is sound. The returned
-        // `Symbol` borrows `lib`, so we call it immediately while `lib` is alive
-        // and do not let the pointer escape this scope.
+        // identical layout on both sides, so the call is sound — and the ABI
+        // check above rejects the stale-artifact case that would break it. The
+        // returned `Symbol` borrows `lib`, so we call it immediately while `lib`
+        // is alive and do not let the pointer escape this scope.
         let registered = unsafe {
-            let register: Symbol<RegisterFn> = lib
-                .get(REGISTER_SYMBOL)
-                .map_err(ScriptError::MissingSymbol)?;
+            let register: Symbol<RegisterFn> = match lib.get(REGISTER_SYMBOL) {
+                Ok(f) => f,
+                Err(e) => {
+                    drop(lib);
+                    let _ = std::fs::remove_file(&copy_path);
+                    return Err(ScriptError::MissingSymbol(e));
+                }
+            };
             let mut ctx = ScriptContext::new(app);
             register(&mut ctx);
             ctx.take_registered()
@@ -156,19 +218,42 @@ impl ScriptHost {
     /// If the source dylib's mtime changed since the last load, reload and
     /// return `true`; otherwise return `false`.
     ///
-    /// On a reload error the host logs and returns `false` (it keeps running the
-    /// previously loaded systems, which were already removed — callers wanting
-    /// strict handling should call [`reload`](Self::reload) directly).
+    /// A change is acted on only once the file has been quiet for
+    /// [`RELOAD_SETTLE`], so a dylib still being written by the linker is left
+    /// alone and picked up by a later poll.
+    ///
+    /// **On failure the plugin's systems and behaviours are gone.** [`reload`]
+    /// removes them before it can know whether the new build loads, so a failed
+    /// reload leaves gameplay inert until the *next* successful one. The failed
+    /// mtime is recorded so a bad build is not retried every frame; the next
+    /// rebuild changes the mtime again and triggers a fresh attempt. Callers
+    /// wanting to handle this explicitly should call [`reload`](Self::reload).
+    ///
+    /// [`reload`]: Self::reload
     pub fn poll(&mut self, app: &mut App) -> bool {
         let current = match std::fs::metadata(&self.path).and_then(|m| m.modified()) {
             Ok(m) => Some(m),
             Err(_) => return false,
         };
         if current != self.last_modified {
+            // Still being written? Leave `last_modified` alone and retry next
+            // poll, rather than dlopen'ing a half-linked image.
+            if let Some(modified) = current {
+                match SystemTime::now().duration_since(modified) {
+                    Ok(age) if age < RELOAD_SETTLE => return false,
+                    // mtime in the future (clock skew / network fs): treat as
+                    // unsettled rather than trusting it.
+                    Err(_) => return false,
+                    Ok(_) => {}
+                }
+            }
             match self.reload(app) {
                 Ok(()) => return true,
                 Err(e) => {
-                    kaadan_core::tracing::error!("script hot-reload failed: {e}");
+                    kaadan_core::tracing::error!(
+                        "script hot-reload failed, gameplay is inert until the next \
+                         successful build: {e}"
+                    );
                     // Avoid hammering reload every frame on a bad build.
                     self.last_modified = current;
                     return false;
@@ -209,4 +294,83 @@ fn unique_copy_path(path: &Path) -> PathBuf {
     };
     let dir = path.parent().unwrap_or_else(|| Path::new("."));
     dir.join(file_name)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// A file that is not a loadable library must fail cleanly *and* leave no
+    /// temp copy behind. The copy lives next to the source, so a leak here
+    /// would litter `target/` on every failed build.
+    #[test]
+    fn failed_load_cleans_up_its_temp_copy() {
+        let dir = std::env::temp_dir().join(format!("kaadan_abi_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let fake = dir.join("libnot_a_plugin.dylib");
+        std::fs::write(&fake, b"this is not a mach-o/elf/pe image").expect("write fake");
+
+        let mut app = App::new();
+        let mut host = ScriptHost::new(&fake);
+        let err = host.load(&mut app).expect_err("garbage must not load");
+        assert!(
+            matches!(err, ScriptError::Load(_)),
+            "expected a Load error, got: {err}"
+        );
+
+        // Only the original should remain in the directory.
+        let leftovers: Vec<_> = std::fs::read_dir(&dir)
+            .expect("read dir")
+            .filter_map(Result::ok)
+            .map(|e| e.file_name())
+            .filter(|n| n != "libnot_a_plugin.dylib")
+            .collect();
+        assert!(
+            leftovers.is_empty(),
+            "failed load leaked temp copies: {leftovers:?}"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    /// A missing source dylib is an `Io` error, not a panic.
+    #[test]
+    fn missing_dylib_is_an_error() {
+        let mut app = App::new();
+        let mut host = ScriptHost::new("/definitely/not/here/libghost.dylib");
+        assert!(matches!(host.load(&mut app), Err(ScriptError::Io(_))));
+    }
+
+    /// `poll` on a host that was never loaded (and whose path does not exist)
+    /// must be a quiet no-op rather than tearing anything down.
+    #[test]
+    fn poll_without_a_dylib_is_a_noop() {
+        let mut app = App::new();
+        let mut host = ScriptHost::new("/definitely/not/here/libghost.dylib");
+        assert!(!host.poll(&mut app));
+    }
+
+    /// A freshly written file is inside the settle window, so `poll` must defer
+    /// rather than loading a possibly half-written image — and must *not* record
+    /// the mtime, so the next poll still sees the change.
+    #[test]
+    fn poll_defers_while_the_dylib_is_still_settling() {
+        let dir = std::env::temp_dir().join(format!("kaadan_settle_test_{}", std::process::id()));
+        std::fs::create_dir_all(&dir).expect("temp dir");
+        let path = dir.join("libsettling.dylib");
+        std::fs::write(&path, b"pretend this is mid-link").expect("write");
+
+        let mut app = App::new();
+        let mut host = ScriptHost::new(&path);
+        assert!(
+            !host.poll(&mut app),
+            "a just-written dylib must not be loaded immediately"
+        );
+        assert!(
+            host.last_modified.is_none(),
+            "deferring must not record the mtime, or the change would be lost"
+        );
+
+        let _ = std::fs::remove_dir_all(&dir);
+    }
 }

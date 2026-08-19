@@ -180,7 +180,15 @@ pub fn create_plane_mesh(device: &wgpu::Device, half: f32) -> Mesh3DGpu {
 /// Push one ring of `sectors + 1` vertices around the Y axis at height `y`,
 /// with `st`/`ct` the sin/cos of the polar angle (radial vs. vertical split of
 /// the normal). Returns the ring's start index.
-fn push_ring(vertices: &mut Vec<Vertex3D>, sectors: u32, radius: f32, st: f32, ct: f32, y: f32, v: f32) -> u32 {
+fn push_ring(
+    vertices: &mut Vec<Vertex3D>,
+    sectors: u32,
+    radius: f32,
+    st: f32,
+    ct: f32,
+    y: f32,
+    v: f32,
+) -> u32 {
     let start = vertices.len() as u32;
     for j in 0..=sectors {
         let phi = 2.0 * PI * (j as f32 / sectors as f32);
@@ -227,7 +235,13 @@ pub fn create_cylinder_mesh(device: &wgpu::Device, radius: f32, half_height: f32
     });
     let top_ring = push_ring(&mut vertices, sectors, radius, 0.0, 1.0, half_height, 0.0);
     for j in 0..sectors {
-        push_tri(&vertices, &mut indices, top_center, top_ring + j, top_ring + j + 1);
+        push_tri(
+            &vertices,
+            &mut indices,
+            top_center,
+            top_ring + j,
+            top_ring + j + 1,
+        );
     }
 
     // Bottom cap.
@@ -240,7 +254,13 @@ pub fn create_cylinder_mesh(device: &wgpu::Device, radius: f32, half_height: f32
     });
     let bot_ring = push_ring(&mut vertices, sectors, radius, 0.0, -1.0, -half_height, 0.0);
     for j in 0..sectors {
-        push_tri(&vertices, &mut indices, bot_center, bot_ring + j, bot_ring + j + 1);
+        push_tri(
+            &vertices,
+            &mut indices,
+            bot_center,
+            bot_ring + j,
+            bot_ring + j + 1,
+        );
     }
 
     Mesh3DGpu::new(device, &vertices, &indices)

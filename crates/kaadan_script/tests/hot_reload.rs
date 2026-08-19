@@ -22,7 +22,7 @@ use std::time::Duration;
 use kaadan_ecs::{App, Time};
 use kaadan_math::{HandleAllocator, Quat, Transform};
 use kaadan_renderer::{Mesh3D, Mesh3DGpu};
-use kaadan_script::ScriptHost;
+use kaadan_script::{BehaviourRegistry, ScriptComponent, ScriptHost};
 
 /// Platform-specific cdylib file name for `game_template`.
 fn cdylib_name() -> &'static str {
@@ -67,7 +67,7 @@ fn hot_reload_loads_and_runs_plugin() {
 
     // 3. Spawn a Mesh3D + Transform entity BEFORE loading (no GPU needed: the
     //    handle is a plain id, and the test never dereferences the mesh). The
-    //    plugin's `build` attaches a `Spinner` behaviour to existing meshes, so
+    //    plugin needs it to exist when the behaviour is attached, so
     //    the entity must exist at load time.
     let mut app = App::new();
     let mut alloc: HandleAllocator<Mesh3DGpu> = HandleAllocator::new();
@@ -75,14 +75,40 @@ fn hot_reload_loads_and_runs_plugin() {
         .world
         .spawn((Mesh3D::new(alloc.allocate()), Transform::IDENTITY));
 
-    // 4. Load the plugin: registers the behaviour driver system and attaches a
-    //    Spinner to the mesh entity.
+    // 4. Load the plugin: passes the ABI check, then registers the behaviour
+    //    driver system and the plugin's behaviour *factories*.
     let mut host = ScriptHost::new(&dylib);
     host.load(&mut app).expect("ScriptHost::load failed");
     assert!(
         !host.plugin_systems().is_empty(),
         "plugin registered no systems"
     );
+
+    // 4b. Attach `Spinner` from the registry. `build` deliberately only
+    //     registers factories — attachment is data-driven, done by the editor or
+    //     a scene loader from per-entity script assignments — so the test plays
+    //     that role here.
+    let spinner = app
+        .resources
+        .get::<BehaviourRegistry>()
+        .expect(
+            "plugin's BehaviourRegistry is not visible to the host.\n\
+             The plugin inserts it through `ScriptContext`, but `Resources` is keyed by \
+             `TypeId`, and `TypeId::of::<BehaviourRegistry>()` differs between the host \
+             binary and the cdylib (verified: kaadan_math's `Transform` matches across the \
+             boundary and round-trips, kaadan_script's types do not).\n\
+             Consequence: `probe_behaviour_names` returns empty and `attach_scripts` never \
+             finds a factory, so no user behaviour attaches in Play mode.\n\
+             Fix: hand factories back explicitly through the `ScriptContext` return path \
+             (as `take_registered` already does for system names) instead of relying on \
+             cross-image `TypeId` equality.",
+        )
+        .create("Spinner")
+        .expect("plugin registered a 'Spinner' factory");
+    app.world
+        .inner_mut()
+        .insert_one(e, ScriptComponent::from_box(spinner))
+        .expect("entity is alive");
 
     // 5. Drive a frame with a known delta so the Spinner produces a
     //    deterministic, non-identity rotation.

@@ -25,6 +25,11 @@ edition = "2021"
 license = "MIT OR Apache-2.0"
 repository = "https://github.com/kaadan/KaadanEngine"
 rust-version = "1.80"
+# Nothing here is published to crates.io — these are workspace-internal crates
+# referenced by path. Saying so lets cargo-deny's wildcard check accept path
+# dependencies (it only exempts them for unpublishable crates) and guards
+# against an accidental `cargo publish`.
+publish = false
 
 [workspace.dependencies]
 # Math & data

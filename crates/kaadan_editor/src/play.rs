@@ -16,7 +16,7 @@ use std::path::{Path, PathBuf};
 use kaadan_ecs::{App, Entity, World};
 use kaadan_input::InputState;
 use kaadan_platform::InputEvent;
-use kaadan_script::{BehaviourRegistry, ScriptComponent, ScriptHost};
+use kaadan_script::{clear_all_behaviours, BehaviourRegistry, ScriptComponent, ScriptHost};
 
 use crate::components::Scripts;
 
@@ -115,6 +115,34 @@ impl PlaySession {
         self.app.tick();
         std::mem::swap(world, &mut self.app.world);
     }
+
+    /// End the session, tearing down everything that points into the plugin
+    /// **before** the library is unmapped.
+    ///
+    /// This must be used instead of simply dropping the session. `tick` swaps
+    /// the editor's world back out, so the live `ScriptComponent` values — whose
+    /// vtables and drop glue live in the plugin's code segment — are sitting in
+    /// the *editor's* world, not in `self.app`. Dropping the session first would
+    /// unmap that code and leave those components dangling; running their
+    /// destructors later (or never) is undefined behaviour.
+    ///
+    /// Order here mirrors [`ScriptHost::reload`]: clear behaviours (running
+    /// `on_destroy`), drop the registry's factory pointers, then drop the app
+    /// (scheduled closures) and finally the host (the `Library`).
+    pub fn stop(mut self, world: &mut World) {
+        std::mem::swap(world, &mut self.app.world);
+        clear_all_behaviours(&mut self.app.world, &mut self.app.resources);
+        if let Some(registry) = self.app.resources.get_mut::<BehaviourRegistry>() {
+            registry.clear();
+        }
+        std::mem::swap(world, &mut self.app.world);
+
+        // Field drop order is declaration order (`app` then `host`), which is
+        // already correct, but be explicit rather than relying on it.
+        let PlaySession { app, host } = self;
+        drop(app);
+        drop(host);
+    }
 }
 
 /// Attach a [`ScriptComponent`] to each entity for every behaviour name in its
@@ -161,10 +189,25 @@ pub fn probe_behaviour_names(crate_dir: &Path) -> Vec<String> {
     if host.load(&mut app).is_err() {
         return Vec::new();
     }
-    app.resources
+    let names: Vec<String> = app
+        .resources
         .get::<BehaviourRegistry>()
         .map(|r| r.names().map(str::to_string).collect())
-        .unwrap_or_default()
+        .unwrap_or_default();
+
+    // The `App` holds scheduled closures monomorphized inside the plugin and a
+    // `BehaviourRegistry` of factory `fn` pointers into it — all dangling the
+    // moment the library is unmapped. Locals drop in *reverse* declaration
+    // order, which would drop `host` (and its `Library`) first, so tear the app
+    // down explicitly here and only then let `host` drop.
+    clear_all_behaviours(&mut app.world, &mut app.resources);
+    if let Some(registry) = app.resources.get_mut::<BehaviourRegistry>() {
+        registry.clear();
+    }
+    drop(app);
+    drop(host);
+
+    names
 }
 
 /// Resolve the built cdylib path for the gameplay crate at `crate_dir`.
