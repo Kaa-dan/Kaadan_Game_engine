@@ -74,7 +74,6 @@ pub fn transform_propagation_system(
     }
 }
 
-/// Write `entity`'s `GlobalTransform`, then recurse into its children.
 fn propagate(world: &mut kaadan_ecs::World, entity: Entity, global: Transform) {
     set_global(world, entity, global);
 

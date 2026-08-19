@@ -1,15 +1,3 @@
-//! Android platform backend.
-//!
-//! Mirrors [`crate::desktop`] but is entered from `android_main` with an
-//! [`AndroidApp`] handed in by the `android-activity` glue, and it handles the
-//! Android surface lifecycle: the native window (and thus the GPU surface) is
-//! created on `resumed`, destroyed on `suspended`, and recreated on every
-//! subsequent `resumed`. The first surface drives [`AppHandler::init`]; later
-//! ones drive [`AppHandler::surface_created`] / [`AppHandler::surface_destroyed`].
-//!
-//! Touch events carry real per-finger positions and ids (unlike the desktop
-//! backend, which synthesises a single `id: 0` touch from the mouse).
-
 use std::sync::Arc;
 use std::time::Instant;
 
@@ -24,7 +12,6 @@ use winit::window::{Window, WindowAttributes, WindowId};
 use crate::input_event::*;
 use crate::platform::{AppHandler, PlatformWindow, WindowConfig};
 
-/// winit `Window` wrapper implementing [`PlatformWindow`] for the renderer.
 struct AndroidWindow {
     window: Arc<Window>,
 }
@@ -60,8 +47,6 @@ struct AndroidWinitApp<H: AppHandler> {
     window: Option<Arc<Window>>,
     last_frame: Instant,
     pending_events: Vec<InputEvent>,
-    /// One-time full init (device, pipelines, scene) has happened. Distinguishes
-    /// the first `resumed` (init) from later ones (surface recreation).
     initialized: bool,
 }
 

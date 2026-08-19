@@ -1,6 +1,3 @@
-//! KaadanEngine demo: a windowed scene of batched sprites with a player sprite
-//! moved by the arrow keys. Run with `cargo run -p kaadan_app --example demo`.
-
 use kaadan_app::Engine;
 use kaadan_ecs::{Resources, Time, World};
 use kaadan_input::InputState;
@@ -8,10 +5,8 @@ use kaadan_math::{Color, Quat, Transform, Vec2, Vec3};
 use kaadan_platform::{run, KeyCode, WindowConfig};
 use kaadan_renderer::{DirectionalLight, Mesh3D, PbrMaterial, Sprite};
 
-/// Marker component for the player-controlled sprite.
 struct Player;
 
-/// Marker component for the spinning 3D cube.
 struct Spinner;
 
 fn checkerboard(size: u32, cells: u32) -> Vec<u8> {

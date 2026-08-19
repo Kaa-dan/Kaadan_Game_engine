@@ -55,9 +55,6 @@ struct LightUniform {
     _pad: [u32; 3],
 }
 
-/// Identifies the set of textures referenced by a material so material-texture
-/// bind groups can be cached across frames (one bind group per distinct
-/// combination, created lazily). `None` slots fall back to default textures.
 #[derive(Clone, Copy, PartialEq, Eq, Hash)]
 struct MaterialTextureKey {
     albedo: Option<Handle<Texture>>,
@@ -77,7 +74,6 @@ impl MaterialTextureKey {
     }
 }
 
-/// 1x1 fallback textures used when a material omits a texture handle.
 struct DefaultTextures {
     white: Texture,
     normal: Texture,
@@ -101,24 +97,14 @@ pub struct PbrRenderer {
     light_bind_group: wgpu::BindGroup,
     defaults: DefaultTextures,
 
-    /// Byte stride between consecutive per-entity uniform blocks, rounded up to
-    /// the device's `min_uniform_buffer_offset_alignment`.
     uniform_stride: u64,
-    /// Single growable buffer holding the model uniform of every entity, one
-    /// `uniform_stride`-aligned block each. Bound with a dynamic offset.
     model_uniform_buffer: wgpu::Buffer,
     model_dynamic_bind_group: wgpu::BindGroup,
-    /// Single growable buffer holding the material uniform of every entity.
     material_uniform_buffer: wgpu::Buffer,
-    /// Number of per-entity blocks the buffers can currently hold.
     capacity: u32,
 
-    /// Material-texture bind groups keyed by their texture combination. The
-    /// material uniform binding inside each is dynamic, so a single cached bind
-    /// group serves every entity sharing that texture set.
     material_bind_groups: HashMap<MaterialTextureKey, wgpu::BindGroup>,
 
-    /// Scratch buffers reused across frames to avoid per-frame heap allocation.
     model_scratch: Vec<u8>,
     material_scratch: Vec<u8>,
 }
@@ -234,9 +220,6 @@ impl PbrRenderer {
         }
     }
 
-    /// Ensure the uniform buffers can hold `count` per-entity blocks, growing
-    /// (and invalidating cached bind groups that referenced the old buffer) only
-    /// when necessary. Amortized: no allocation in steady state.
     fn ensure_capacity(&mut self, device: &wgpu::Device, count: u32) {
         if count <= self.capacity {
             return;
@@ -255,8 +238,6 @@ impl PbrRenderer {
         self.capacity = new_capacity;
     }
 
-    /// Resolve a material texture handle to a view/sampler, falling back to the
-    /// given default when the handle is missing or unregistered.
     fn resolve<'a>(
         textures: &'a HashMap<Handle<Texture>, Texture>,
         handle: Option<Handle<Texture>>,
@@ -265,8 +246,6 @@ impl PbrRenderer {
         handle.and_then(|h| textures.get(&h)).unwrap_or(default)
     }
 
-    /// Get (or lazily create and cache) the material-texture bind group for the
-    /// material's texture combination.
     fn material_bind_group(
         &mut self,
         device: &wgpu::Device,
@@ -412,8 +391,6 @@ impl PbrRenderer {
     }
 }
 
-/// Presence flag (1.0/0.0) for a material texture, true only if the handle is
-/// set and actually registered in the texture map.
 fn presence(handle: Option<Handle<Texture>>, textures: &HashMap<Handle<Texture>, Texture>) -> f32 {
     match handle {
         Some(h) if textures.contains_key(&h) => 1.0,
@@ -556,8 +533,6 @@ fn build_light_uniform(world: &kaadan_ecs::World, camera_position: Vec3) -> Ligh
 mod tests {
     use naga::valid::{Capabilities, ValidationFlags, Validator};
 
-    /// Validate that both PBR shaders parse and pass naga validation without a
-    /// GPU. naga 23.x matches the wgsl front-end shipped with wgpu 23.
     fn validate(name: &str, source: &str) {
         let module = naga::front::wgsl::parse_str(source)
             .unwrap_or_else(|e| panic!("{name} failed to parse: {e}"));

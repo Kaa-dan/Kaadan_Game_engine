@@ -1,23 +1,3 @@
-//! Unity-style scripted behaviours layered over the raw ECS-system model.
-//!
-//! A [`Behaviour`] is a stateful object attached to an entity via a
-//! [`ScriptComponent`]. Its [`start`](Behaviour::start) runs once, the first
-//! frame it is seen; its [`update`](Behaviour::update) runs every frame after.
-//! This gives gameplay authors the familiar "script with `start`/`update`"
-//! ergonomics of Unity's `MonoBehaviour` without abandoning the underlying ECS:
-//! a single driver system ([`behaviour_driver_system`]) walks the
-//! `ScriptComponent`s and dispatches their lifecycle calls.
-//!
-//! # Hot-reload safety
-//!
-//! A `Box<dyn Behaviour>` carries a vtable pointing into the code that defined
-//! the concrete type — for gameplay that is the loaded plugin dylib. Those
-//! instances must **not** outlive the dylib, or the vtable dangles. The host
-//! therefore calls [`clear_all_behaviours`] on reload (before dropping the old
-//! library); the fresh plugin re-attaches behaviours from its `build`. Behaviour
-//! *instance* state does not survive a reload — only data stored in ordinary
-//! components from shared crates does. See `docs/scripting/abi.md`.
-
 use kaadan_ecs::{Entity, Resources, Time, World};
 
 /// Context handed to a [`Behaviour`]'s lifecycle methods.
@@ -243,8 +223,6 @@ mod tests {
     use kaadan_ecs::App;
     use std::time::Duration;
 
-    /// Shared tally the test behaviour writes into, so we can observe lifecycle
-    /// dispatch without downcasting the trait object.
     #[derive(Default)]
     struct Tally {
         starts: u32,

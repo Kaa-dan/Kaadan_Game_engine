@@ -1,6 +1,3 @@
-//! Inspector panel: view and edit the components of the selected entity, plus
-//! Add/Remove component UI driven by the [`ComponentRegistry`].
-
 use egui::DragValue;
 use kaadan_ecs::{Entity, World};
 use kaadan_math::{Color, EulerRot, Quat, Transform};
@@ -121,9 +118,6 @@ pub fn show(
     add_component_combo(ui, world, entity, registry);
 }
 
-/// Scripts / behaviours attached to the entity. Behaviours are named references
-/// resolved on Play against the built gameplay crate; the dropdown lists the
-/// names discovered by probing that crate's dylib (refresh with ↻).
 fn scripts_section(
     ui: &mut egui::Ui,
     world: &mut World,
@@ -193,8 +187,6 @@ fn scripts_section(
     }
 }
 
-/// Header row with a `×` Remove button on the right; the registry name doubles
-/// as the section title so the remove maps unambiguously.
 fn section_with_remove(
     ui: &mut egui::Ui,
     name: &'static str,
@@ -218,9 +210,6 @@ fn section_with_remove(
     });
 }
 
-/// Combo + Add button listing every registry entry that the entity does NOT
-/// currently have and that has a `Default` ctor (others are structural — like
-/// `Parent`/`Children` — and only show up here for completeness elsewhere).
 fn add_component_combo(
     ui: &mut egui::Ui,
     world: &mut World,

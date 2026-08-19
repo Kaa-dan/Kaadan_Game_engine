@@ -10,8 +10,6 @@ use crate::resolver::AssetResolver;
 use crate::storage::AssetStorage;
 use crate::LoadState;
 
-/// Re-runs a loader for a previously-loaded path, replacing the stored asset at
-/// the same handle. Captured at load time; invoked by [`AssetServer::reload_path`].
 type Reloader = Box<dyn FnMut(&mut AssetServer) -> Result<(), kaadan_core::KaadanError> + Send>;
 
 /// Central asset manager — resolves paths, deduplicates, runs type-specific
@@ -24,10 +22,7 @@ pub struct AssetServer {
     resolver: Arc<dyn AssetResolver>,
     storages: HashMap<TypeId, Box<dyn Any + Send + Sync>>,
     worker: AssetWorker,
-    /// Reload closures keyed by path, recorded when a path is first loaded.
     reloaders: HashMap<String, Reloader>,
-    /// Monotonic reload counter per path, bumped on each successful reload so
-    /// consumers can detect that an asset changed underneath them.
     reload_versions: HashMap<String, u64>,
 }
 
@@ -220,8 +215,6 @@ impl AssetServer {
         self.load_state::<T>(handle) == Some(LoadState::Loaded)
     }
 
-    /// Record (or replace) the reloader for a path. The closure clones the
-    /// shared loader and resolver and re-fulfils the existing handle.
     fn record_reloader<T, L>(&mut self, path: &str, loader: Arc<L>)
     where
         T: Send + Sync + 'static,

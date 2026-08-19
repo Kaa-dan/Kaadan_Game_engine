@@ -1,11 +1,5 @@
 use kaadan_ecs::{Component, Entity, World};
 
-/// Type-erased component operations keyed by a stable string name.
-///
-/// This decouples editor / tooling code (which works in terms of component
-/// *names*, e.g. from a serialized scene or a UI dropdown) from the concrete
-/// generic component types. Each registered entry stores function pointers that
-/// monomorphize the relevant `World` operation for one type `T`.
 struct ComponentEntry {
     name: &'static str,
     has: fn(&World, Entity) -> bool,
@@ -123,17 +117,14 @@ mod tests {
         let mut world = World::new();
         let e = world.spawn((Health(42),));
 
-        // names() reports both registrations.
         let names: Vec<_> = registry.names().collect();
         assert!(names.contains(&"Health"));
         assert!(names.contains(&"Tag"));
 
-        // has
         assert_eq!(registry.has(&world, e, "Health"), Some(true));
         assert_eq!(registry.has(&world, e, "Tag"), Some(false));
         assert_eq!(registry.has(&world, e, "Unknown"), None);
 
-        // remove
         assert!(registry.remove(&mut world, e, "Health"));
         assert_eq!(registry.has(&world, e, "Health"), Some(false));
         // removing again / removing absent is a no-op that still returns true
@@ -141,13 +132,11 @@ mod tests {
         // unknown name -> false
         assert!(!registry.remove(&mut world, e, "Unknown"));
 
-        // insert_default
         assert!(registry.insert_default(&mut world, e, "Health"));
         assert_eq!(registry.has(&world, e, "Health"), Some(true));
         assert_eq!(*world.get::<Health>(e).unwrap(), Health::default());
         // "Tag" was registered without a default ctor.
         assert!(!registry.insert_default(&mut world, e, "Tag"));
-        // unknown name
         assert!(!registry.insert_default(&mut world, e, "Unknown"));
     }
 }

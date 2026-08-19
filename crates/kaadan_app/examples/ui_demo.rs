@@ -1,10 +1,3 @@
-//! In-game UI demo: a centered panel containing an interactive button and an
-//! animated progress bar, drawn by the engine's `UiRenderer`.
-//! Run with `cargo run -p kaadan_app --example ui_demo`.
-//!
-//! Note: text glyphs are not drawn yet (pending a bundled font), so widgets
-//! appear as colored quads. Hover/press the button to see it tint.
-
 use kaadan_app::Engine;
 use kaadan_ecs::{Resources, Time, World};
 use kaadan_math::Color;
@@ -14,7 +7,6 @@ use kaadan_ui::{
     AlignItems, FlexDirection, JustifyContent, UiButton, UiNode, UiProgressBar, UiScreen, UiStyle,
 };
 
-/// Marker for the animated progress bar.
 struct Animated;
 
 fn main() {
@@ -50,7 +42,6 @@ fn main() {
                 ..Default::default()
             },));
 
-            // Panel.
             let panel = setup.world.spawn((UiNode {
                 style: UiStyle {
                     width: 360.0,
@@ -65,7 +56,6 @@ fn main() {
                 ..Default::default()
             },));
 
-            // Interactive button.
             let button = setup.world.spawn((
                 UiNode {
                     style: UiStyle {
@@ -80,7 +70,6 @@ fn main() {
                 UiButton::new("Click me"),
             ));
 
-            // Animated progress bar.
             let bar = setup.world.spawn((
                 UiNode {
                     style: UiStyle {

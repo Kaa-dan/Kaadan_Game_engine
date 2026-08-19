@@ -12,13 +12,9 @@ pub struct AtlasRegion {
     pub pixel_size: Vec2,
 }
 
-/// A single shelf in the [`AtlasPacker`]: a horizontal band of fixed height.
 struct Shelf {
-    /// Y position of the shelf's top edge (pixels).
     y: u32,
-    /// Height of the shelf (pixels).
     height: u32,
-    /// X cursor: next free x position within the shelf (pixels).
     cursor_x: u32,
 }
 
@@ -31,10 +27,8 @@ struct Shelf {
 pub struct AtlasPacker {
     width: u32,
     height: u32,
-    /// Padding inserted around each inserted rectangle, in pixels.
     padding: u32,
     shelves: Vec<Shelf>,
-    /// Y position of the top of the next new shelf (pixels).
     next_shelf_y: u32,
 }
 
@@ -110,7 +104,6 @@ impl AtlasPacker {
         Some(self.region(x, y, w, h))
     }
 
-    /// Build an [`AtlasRegion`] for a pixel rect within this atlas.
     fn region(&self, x: u32, y: u32, w: u32, h: u32) -> AtlasRegion {
         let tw = self.width as f32;
         let th = self.height as f32;
@@ -187,7 +180,6 @@ impl TextureAtlas {
 mod tests {
     use super::*;
 
-    /// Pixel rect of a region within an `atlas_size` x `atlas_size` atlas.
     fn pixel_rect(r: &AtlasRegion, atlas_size: f32) -> (f32, f32, f32, f32) {
         let x = r.uv_min.x * atlas_size;
         let y = r.uv_min.y * atlas_size;

@@ -1,13 +1,3 @@
-//! Assets panel: lists the GPU assets (textures, meshes) currently registered
-//! with the viewport's asset registry.
-//!
-//! Deferred: a real asset *browser* (filesystem scan, thumbnails, drag-and-drop
-//! onto entities, import settings) needs a project/asset-pipeline layer that
-//! doesn't exist yet. For Phase 7 the panel is a read-only inventory of what
-//! the running editor has loaded — enough to confirm dedup is working and to
-//! see what a saved scene will reference. Real browsing lands when the asset
-//! pipeline (`kaadan_assets`) is wired through the editor.
-
 use crate::viewport::Viewport;
 
 pub fn show(ui: &mut egui::Ui, viewport: &Viewport) {

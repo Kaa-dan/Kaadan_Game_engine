@@ -105,8 +105,6 @@ impl Texture {
     }
 }
 
-/// Generate mip levels 1..`mip_count` for `texture` by repeatedly downsampling
-/// the previous level with a fullscreen-triangle blit pipeline.
 fn generate_mipmaps(
     device: &wgpu::Device,
     queue: &wgpu::Queue,
@@ -241,7 +239,6 @@ fn generate_mipmaps(
     queue.submit(std::iter::once(encoder.finish()));
 }
 
-/// Fullscreen-triangle blit/downsample shader used for mipmap generation.
 const MIP_BLIT_SHADER: &str = r#"
 struct VertexOutput {
     @builtin(position) position: vec4<f32>,

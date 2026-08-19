@@ -1,8 +1,3 @@
-//! The scene viewport: owns an ECS world and the 2D/3D renderers, draws the
-//! scene into an offscreen [`RenderTarget`], and exposes its color view so the
-//! UI layer can show it inside an egui panel. Also owns the asset registry that
-//! maps GPU handles to serializable [`TextureSource`]/[`MeshSource`] descriptors.
-
 use std::collections::HashMap;
 use std::path::Path;
 
@@ -164,8 +159,6 @@ impl Viewport {
         }
     }
 
-    // --- Asset registry ---------------------------------------------------
-
     pub fn get_or_create_texture(
         &mut self,
         device: &wgpu::Device,
@@ -226,8 +219,6 @@ impl Viewport {
         handle
     }
 
-    /// Load a single submesh from a glTF/`.glb` file by primitive index. Used
-    /// when reloading a saved scene that references imported geometry.
     fn load_gltf_mesh(
         &mut self,
         device: &wgpu::Device,
@@ -240,8 +231,6 @@ impl Viewport {
         Some(Mesh3DGpu::new(device, &m.vertices, &m.indices))
     }
 
-    /// Register an already-built mesh under a source key (dedup on the key), used
-    /// by glTF import which uploads geometry it already has in memory.
     fn insert_mesh_asset(&mut self, source: MeshSource, mesh: Mesh3DGpu) -> Handle<Mesh3DGpu> {
         let key = source.key();
         if let Some(handle) = self.mesh_keys.get(&key) {
@@ -254,7 +243,6 @@ impl Viewport {
         handle
     }
 
-    /// Register an already-built texture under a source key (dedup on the key).
     fn insert_texture_asset(
         &mut self,
         device: &wgpu::Device,
@@ -354,8 +342,6 @@ impl Viewport {
         self.mesh_sources.get(&handle).cloned()
     }
 
-    // --- Scene save / load ------------------------------------------------
-
     pub fn save_scene(&self, path: &Path) -> Result<(), String> {
         let scene = self.to_scene();
         let ron = scene.to_ron()?;
@@ -377,8 +363,6 @@ impl Viewport {
         tracing::info!("loaded scene from {} ({roots} roots)", path.display());
         Ok(())
     }
-
-    // --- Asset listing (used by the Assets panel) -------------------------
 
     /// String keys of all loaded texture assets, sorted for stable display.
     pub fn texture_keys(&self) -> Vec<&str> {
@@ -569,8 +553,6 @@ impl Viewport {
         entity
     }
 
-    /// Spawn a small starter scene (lit cube + 2D sprite grid) so the editor has
-    /// something real to display and manipulate.
     fn seed_demo(&mut self, device: &wgpu::Device, queue: &wgpu::Queue) {
         let cube = self.get_or_create_mesh(device, &MeshSource::Cube { half_extent: 1.0 });
         self.world.spawn((

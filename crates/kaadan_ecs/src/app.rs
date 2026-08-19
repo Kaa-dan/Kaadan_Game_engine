@@ -1,7 +1,5 @@
 use crate::{Resources, Schedule, Stage, Time, World};
 
-/// Upper bound on `FixedUpdate` runs per frame, a second guard against the
-/// spiral of death (the first being delta clamping in [`Time`]).
 const MAX_FIXED_STEPS: u32 = 8;
 
 /// Plugin trait for modular system registration.

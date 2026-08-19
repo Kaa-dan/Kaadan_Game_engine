@@ -18,8 +18,6 @@ use crate::behaviour::{
 pub struct ScriptContext<'a> {
     app: &'a mut App,
     registered: Vec<String>,
-    /// Whether the [`behaviour_driver_system`] has been registered through this
-    /// context yet — guards against registering it once per behaviour.
     behaviours_enabled: bool,
 }
 

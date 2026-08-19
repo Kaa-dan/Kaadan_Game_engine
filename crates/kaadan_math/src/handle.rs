@@ -39,7 +39,6 @@ impl<T> Handle<T> {
     }
 }
 
-/// Entry in the allocator's slot array.
 struct Slot {
     generation: u32,
     is_live: bool,

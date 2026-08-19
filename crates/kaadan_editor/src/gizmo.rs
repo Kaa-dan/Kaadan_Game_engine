@@ -1,10 +1,3 @@
-//! Hand-rolled viewport gizmos + click picking.
-//!
-//! No published `transform-gizmo` release targets egui 0.30 (which we're pinned
-//! to via wgpu 23), so this draws axis handles directly with egui's painter and
-//! does the screen<->world math itself. The pure math (projection, ray/sphere,
-//! sprite AABB) is unit-tested so behaviour is verifiable without a display.
-
 use egui::{Color32, Pos2, Stroke, Vec2 as EVec2};
 use kaadan_ecs::{Entity, World};
 use kaadan_math::{Mat4, Quat, Transform, Vec2, Vec3, Vec4};
@@ -52,7 +45,6 @@ impl Axis {
 const HANDLE_PX: f32 = 70.0;
 const GRAB_PX: f32 = 8.0;
 
-/// Inputs the gizmo needs from the selected entity's relevant camera.
 struct View {
     view_projection: Mat4,
     is_3d: bool,
@@ -233,9 +225,6 @@ fn draw(ui: &egui::Ui, rect: egui::Rect, view: &View, origin: Vec3, mode: GizmoM
     }
 }
 
-// --- Pure math (unit-tested) ---------------------------------------------
-
-/// Project a world point into the egui screen rect. `None` if behind the camera.
 fn world_to_screen(view_projection: Mat4, rect: egui::Rect, world: Vec3) -> Option<Pos2> {
     let clip = view_projection * Vec4::new(world.x, world.y, world.z, 1.0);
     if clip.w <= 0.0 {
@@ -247,7 +236,6 @@ fn world_to_screen(view_projection: Mat4, rect: egui::Rect, world: Vec3) -> Opti
     Some(Pos2::new(x, y))
 }
 
-/// Screen-space vector for 1 world unit along `axis` from `origin`.
 fn axis_screen_dir(
     view_projection: Mat4,
     rect: egui::Rect,
